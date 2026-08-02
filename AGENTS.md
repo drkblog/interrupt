@@ -34,7 +34,7 @@ src/
 4. **Application State Machine (`src/main.rs`)**:
    - **`AppState::Play`**: Normal computer usage. Displays prominent live countdown timer (`MM:SS`), "🔒 Lock Now", and password-protected "🔄 Reset Timer" buttons.
    - **`AppState::Warning`**: Triggered `warning_time_seconds` (default 30s) before pause time. Displays floating red warning banner with live countdown.
-   - **`AppState::Pause`**: Fullscreen topmost dark overlay covering all virtual screen space. Password box is hidden on initial lock without stealing focus; user interaction (mouse move/click, keypress) reveals and focuses the unblock panel. Automatically hides after 20s of inactivity.
+   - **`AppState::Pause`**: Fullscreen topmost dark overlay covering all virtual screen space. Password box is hidden on initial lock without stealing focus; initial 10-second grace period ignores interactions so mouse jitter does not trigger the password prompt immediately. After 10s, user interaction (mouse move/click, keypress) reveals and focuses the unblock panel. Automatically hides after 20s of inactivity.
    - **Timer Suspension**: While the settings window is open (`show_settings = true`), elapsed timer accumulation is suspended so editing settings does not count against play/break duration.
 
 ## Building and Testing

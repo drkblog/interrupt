@@ -252,20 +252,29 @@ impl InterruptApp {
             0
         };
 
-        // Check for user interactions (mouse move/click or keyboard press)
-        let is_interacting = ctx.input(|i| {
-            i.pointer.any_click()
-                || i.pointer.any_down()
-                || i.pointer.delta() != egui::vec2(0.0, 0.0)
-                || !i.events.is_empty()
-        });
+        let lock_elapsed = self.state_start.elapsed();
+        let lock_grace_period = Duration::from_secs(10);
 
-        if is_interacting {
-            self.last_pause_interaction = Some(Instant::now());
-            if !self.show_pause_unblock_panel {
-                self.show_pause_unblock_panel = true;
-                self.focus_password_field = true;
+        // Only detect user interaction after the initial 10-second lock grace period
+        if lock_elapsed >= lock_grace_period {
+            let is_interacting = ctx.input(|i| {
+                i.pointer.any_click()
+                    || i.pointer.any_down()
+                    || i.pointer.delta() != egui::vec2(0.0, 0.0)
+                    || !i.events.is_empty()
+            });
+
+            if is_interacting {
+                self.last_pause_interaction = Some(Instant::now());
+                if !self.show_pause_unblock_panel {
+                    self.show_pause_unblock_panel = true;
+                    self.focus_password_field = true;
+                }
             }
+        } else {
+            // Keep password unblock panel hidden during initial 10 seconds of screen lock
+            self.show_pause_unblock_panel = false;
+            self.last_pause_interaction = None;
         }
 
         // Hide unblock panel if no interaction for 20 seconds
