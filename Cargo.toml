@@ -1,0 +1,33 @@
+[package]
+name = "interrupt"
+version = "0.1.0"
+edition = "2021"
+authors = ["Leandro"]
+description = "A Windows Rust application that enforces healthy screen break cycles."
+
+[features]
+default = []
+debug = []
+
+[dependencies]
+eframe = { version = "0.28.1", features = ["default"] }
+egui = "0.28.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+dirs = "5.0"
+parking_lot = "0.12"
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Threading",
+    "Win32_System_LibraryLoader"
+] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
