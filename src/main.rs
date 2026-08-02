@@ -30,9 +30,13 @@ pub struct InterruptApp {
     new_password_input: String,
     settings_message: Option<String>,
     focus_password_field: bool,
+    focus_settings_password: bool,
+    focus_reset_password: bool,
     show_reset_dialog: bool,
     reset_password_input: String,
     reset_error_message: Option<String>,
+    show_pause_unblock_panel: bool,
+    last_pause_interaction: Option<Instant>,
 }
 
 impl InterruptApp {
@@ -61,9 +65,13 @@ impl InterruptApp {
             new_password_input: String::new(),
             settings_message: None,
             focus_password_field: false,
+            focus_settings_password: false,
+            focus_reset_password: false,
             show_reset_dialog: false,
             reset_password_input: String::new(),
             reset_error_message: None,
+            show_pause_unblock_panel: false,
+            last_pause_interaction: None,
         }
     }
 
@@ -77,6 +85,27 @@ impl InterruptApp {
 
     fn warning_duration(&self) -> Duration {
         Duration::from_secs(self.settings.warning_time_seconds as u64)
+    }
+
+    fn open_settings(&mut self) {
+        self.show_settings = true;
+        self.focus_settings_password = true;
+        self.settings_password_input.clear();
+        self.settings_message = None;
+    }
+
+    fn close_settings(&mut self) {
+        self.show_settings = false;
+        self.settings_unlocked = false;
+        self.settings_password_input.clear();
+        self.settings_message = None;
+    }
+
+    fn open_reset_dialog(&mut self) {
+        self.show_reset_dialog = true;
+        self.focus_reset_password = true;
+        self.reset_password_input.clear();
+        self.reset_error_message = None;
     }
 
     fn update_cycle_state(&mut self, ctx: &egui::Context) {
@@ -124,7 +153,9 @@ impl InterruptApp {
         self.state_start = Instant::now();
         self.password_input.clear();
         self.password_error = None;
-        self.focus_password_field = true;
+        self.show_pause_unblock_panel = false;
+        self.focus_password_field = false;
+        self.last_pause_interaction = None;
 
         let rect = win32::get_virtual_screen_rect();
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
@@ -133,7 +164,6 @@ impl InterruptApp {
             rect.width as f32,
             rect.height as f32,
         )));
-        ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
         win32::make_app_window_fullscreen_topmost();
     }
 
@@ -143,6 +173,8 @@ impl InterruptApp {
         self.state_start = Instant::now();
         self.password_input.clear();
         self.password_error = None;
+        self.show_pause_unblock_panel = false;
+        self.last_pause_interaction = None;
 
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::Normal));
@@ -220,6 +252,32 @@ impl InterruptApp {
             0
         };
 
+        // Check for user interactions (mouse move/click or keyboard press)
+        let is_interacting = ctx.input(|i| {
+            i.pointer.any_click()
+                || i.pointer.any_down()
+                || i.pointer.delta() != egui::vec2(0.0, 0.0)
+                || !i.events.is_empty()
+        });
+
+        if is_interacting {
+            self.last_pause_interaction = Some(Instant::now());
+            if !self.show_pause_unblock_panel {
+                self.show_pause_unblock_panel = true;
+                self.focus_password_field = true;
+            }
+        }
+
+        // Hide unblock panel if no interaction for 20 seconds
+        if let Some(last_time) = self.last_pause_interaction {
+            if last_time.elapsed() >= Duration::from_secs(20) {
+                self.show_pause_unblock_panel = false;
+                self.last_pause_interaction = None;
+                self.password_input.clear();
+                self.password_error = None;
+            }
+        }
+
         let bg_color = get_background_color(self.settings.screensaver_style);
 
         egui::CentralPanel::default()
@@ -237,73 +295,70 @@ impl InterruptApp {
                         remaining_sec,
                     );
 
-                    ui.add_space(40.0);
+                    ui.add_space(30.0);
 
-                    // Reused unblock panel component across all screensavers
-                    egui::Frame::none()
-                        .fill(egui::Color32::from_rgb(30, 41, 59))
-                        .rounding(12.0)
-                        .inner_margin(egui::Margin::same(24.0))
-                        .show(ui, |ui| {
-                            ui.set_max_width(360.0);
-                            ui.label(
-                                egui::RichText::new("Enter Password to Unblock Early:")
-                                    .size(16.0)
-                                    .color(egui::Color32::LIGHT_GRAY),
-                            );
-                            ui.add_space(8.0);
-
-                            let response = ui.add(
-                                egui::TextEdit::singleline(&mut self.password_input)
-                                    .password(true)
-                                    .hint_text("Password...")
-                                    .desired_width(320.0),
-                            );
-
-                            let user_interacted = ctx.input(|i| {
-                                i.pointer.any_click()
-                                    || i.pointer.any_down()
-                                    || !i.events.is_empty()
-                            });
-
-                            if self.focus_password_field
-                                || !response.has_focus()
-                                || user_interacted
-                            {
-                                response.request_focus();
-                                self.focus_password_field = false;
-                                ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
-                            }
-
-                            if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                                self.try_unblock(ctx);
-                            }
-
-                            ui.add_space(12.0);
-
-                            if ui
-                                .add(
-                                    egui::Button::new(
-                                        egui::RichText::new("🔓 Unblock Screen")
-                                            .size(16.0)
-                                            .strong(),
-                                    )
-                                    .min_size(egui::vec2(200.0, 40.0)),
-                                )
-                                .clicked()
-                            {
-                                self.try_unblock(ctx);
-                            }
-
-                            if let Some(ref err) = self.password_error {
-                                ui.add_space(8.0);
+                    // Password unblock panel (Only visible when user interacts)
+                    if self.show_pause_unblock_panel {
+                        egui::Frame::none()
+                            .fill(egui::Color32::from_rgb(30, 41, 59))
+                            .rounding(12.0)
+                            .inner_margin(egui::Margin::same(24.0))
+                            .show(ui, |ui| {
+                                ui.set_max_width(360.0);
                                 ui.label(
-                                    egui::RichText::new(err)
-                                        .color(egui::Color32::LIGHT_RED)
-                                        .size(14.0),
+                                    egui::RichText::new("Enter Password to Unblock Early:")
+                                        .size(16.0)
+                                        .color(egui::Color32::LIGHT_GRAY),
                                 );
-                            }
-                        });
+                                ui.add_space(8.0);
+
+                                let response = ui.add(
+                                    egui::TextEdit::singleline(&mut self.password_input)
+                                        .password(true)
+                                        .hint_text("Password...")
+                                        .desired_width(320.0),
+                                );
+
+                                if response.changed() || response.has_focus() {
+                                    self.last_pause_interaction = Some(Instant::now());
+                                }
+
+                                if self.focus_password_field {
+                                    response.request_focus();
+                                    self.focus_password_field = false;
+                                    ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                                }
+
+                                if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                                    self.try_unblock(ctx);
+                                }
+
+                                ui.add_space(12.0);
+
+                                if ui
+                                    .add(
+                                        egui::Button::new(
+                                            egui::RichText::new("🔓 Unblock Screen")
+                                                .size(16.0)
+                                                .strong(),
+                                        )
+                                        .min_size(egui::vec2(200.0, 40.0)),
+                                    )
+                                    .clicked()
+                                {
+                                    self.try_unblock(ctx);
+                                }
+
+                                if let Some(ref err) = self.password_error {
+                                    ui.add_space(8.0);
+                                    ui.label(
+                                        egui::RichText::new(err)
+                                            .color(egui::Color32::LIGHT_RED)
+                                            .size(14.0),
+                                    );
+                                }
+                            });
+                    }
                 });
             });
     }
@@ -329,6 +384,11 @@ impl InterruptApp {
                         .hint_text("Password..."),
                 );
 
+                if self.focus_reset_password {
+                    response.request_focus();
+                    self.focus_reset_password = false;
+                }
+
                 if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                     self.try_reset_timer();
                 }
@@ -351,7 +411,12 @@ impl InterruptApp {
                     ui.label(egui::RichText::new(err).color(egui::Color32::LIGHT_RED));
                 }
             });
-        self.show_reset_dialog = open;
+
+        if !open {
+            self.show_reset_dialog = false;
+            self.reset_password_input.clear();
+            self.reset_error_message = None;
+        }
     }
 
     fn render_settings_window(&mut self, ctx: &egui::Context) {
@@ -376,6 +441,11 @@ impl InterruptApp {
                             .password(true)
                             .hint_text("Password..."),
                     );
+
+                    if self.focus_settings_password {
+                        response.request_focus();
+                        self.focus_settings_password = false;
+                    }
 
                     if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                         if self.settings.verify_password(&self.settings_password_input) {
@@ -474,7 +544,7 @@ impl InterruptApp {
                         }
 
                         if ui.button("🔒 Lock Screen Now").clicked() {
-                            self.show_settings = false;
+                            self.close_settings();
                             self.transition_to_pause(ctx);
                         }
                     });
@@ -485,7 +555,10 @@ impl InterruptApp {
                     }
                 }
             });
-        self.show_settings = open;
+
+        if !open {
+            self.close_settings();
+        }
     }
 }
 
@@ -531,13 +604,13 @@ impl eframe::App for InterruptApp {
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("⚙️ Settings").clicked() {
-                            self.show_settings = true;
+                            self.open_settings();
                         }
                         if ui.button("🔒 Lock Now").clicked() {
                             self.transition_to_pause(ctx);
                         }
                         if ui.button("🔄 Reset Timer").clicked() {
-                            self.show_reset_dialog = true;
+                            self.open_reset_dialog();
                         }
                     });
                 });
@@ -602,7 +675,7 @@ impl eframe::App for InterruptApp {
                             )
                             .clicked()
                         {
-                            self.show_reset_dialog = true;
+                            self.open_reset_dialog();
                         }
                     });
 
@@ -622,12 +695,13 @@ impl eframe::App for InterruptApp {
 
         if self.state == AppState::Pause {
             self.render_pause_screen(ctx);
+            ctx.request_repaint();
+        } else {
+            ctx.request_repaint_after(Duration::from_millis(500));
         }
 
         self.render_reset_dialog(ctx);
         self.render_settings_window(ctx);
-
-        ctx.request_repaint_after(Duration::from_millis(500));
     }
 }
 

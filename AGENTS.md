@@ -23,6 +23,7 @@ src/
 
 2. **Modular Screensavers (`src/screensaver.rs`)**:
    - Implements `ScreensaverComponent` trait for visual screensaver rendering (`Default`, `Minimalist`, `Matrix`).
+   - `MatrixScreensaver` renders a smooth 60 FPS animated digital rain with glowing green characters and trailing streams.
    - Outer shell in `render_pause_screen` handles input focus, password verification, and OS window level, making it trivial to add new screensavers while reusing all unblock mechanics.
 
 3. **Windows API Integration (`src/win32.rs`)**:
@@ -33,7 +34,7 @@ src/
 4. **Application State Machine (`src/main.rs`)**:
    - **`AppState::Play`**: Normal computer usage. Displays prominent live countdown timer (`MM:SS`), "🔒 Lock Now", and password-protected "🔄 Reset Timer" buttons.
    - **`AppState::Warning`**: Triggered `warning_time_seconds` (default 30s) before pause time. Displays floating red warning banner with live countdown.
-   - **`AppState::Pause`**: Fullscreen topmost dark overlay covering all virtual screen space. Enforces keyboard hook, captures input focus, requires password to unlock early or auto-unlocks when pause timer expires.
+   - **`AppState::Pause`**: Fullscreen topmost dark overlay covering all virtual screen space. Password box is hidden on initial lock without stealing focus; user interaction (mouse move/click, keypress) reveals and focuses the unblock panel. Automatically hides after 20s of inactivity.
    - **Timer Suspension**: While the settings window is open (`show_settings = true`), elapsed timer accumulation is suspended so editing settings does not count against play/break duration.
 
 ## Building and Testing

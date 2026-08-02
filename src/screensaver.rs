@@ -27,7 +27,7 @@ impl ScreensaverStyle {
         match self {
             ScreensaverStyle::Default => "Default (Ambient Slate)",
             ScreensaverStyle::Minimalist => "Minimalist (Monochrome Dark)",
-            ScreensaverStyle::Matrix => "Matrix (Digital Green)",
+            ScreensaverStyle::Matrix => "Matrix (Digital Green Rain)",
         }
     }
 }
@@ -111,41 +111,98 @@ impl ScreensaverComponent for MinimalistScreensaver {
     }
 }
 
-// 3. Matrix Screensaver Component
+// 3. Matrix Digital Rain Screensaver Component
 pub struct MatrixScreensaver;
 
 impl ScreensaverComponent for MatrixScreensaver {
     fn render_visuals(&mut self, ui: &mut egui::Ui, remaining_sec: u64) {
+        let available_rect = ui.available_rect_before_wrap();
+        let time = ui.input(|i| i.time);
+        let painter = ui.painter();
+
+        let chars = [
+            '0', '1', 'X', 'Y', 'Z', 'A', '7', '9', 'B', 'K', 'M', '#', '%', '*', '&', '$', '@',
+            '!',
+        ];
+        let col_width = 22.0;
+        let char_height = 18.0;
+        let num_cols = (available_rect.width() / col_width) as usize;
+
+        // Draw animated digital rain streams
+        for c in 0..num_cols {
+            let x = available_rect.min.x + c as f32 * col_width;
+
+            let seed = (c * 37 + 17) as f64;
+            let speed = 110.0 + (seed % 120.0) as f32;
+            let length = 10 + (seed as usize % 12);
+
+            let y_head = ((time as f32 * speed + (seed * 19.0) as f32)
+                % (available_rect.height() + length as f32 * char_height))
+                - length as f32 * char_height;
+
+            for i in 0..length {
+                let y = y_head - i as f32 * char_height;
+                if y >= available_rect.min.y && y <= available_rect.max.y {
+                    let char_idx = (seed as usize + i + (y_head / 24.0) as usize) % chars.len();
+                    let ch = chars[char_idx];
+
+                    let color = if i == 0 {
+                        egui::Color32::from_rgb(220, 255, 220) // Glowing white-green head
+                    } else {
+                        let alpha = (255.0 * (1.0 - (i as f32 / length as f32))) as u8;
+                        egui::Color32::from_rgba_unmultiplied(34, 197, 94, alpha) // Fading tail
+                    };
+
+                    painter.text(
+                        egui::pos2(x, y),
+                        egui::Align2::LEFT_TOP,
+                        ch.to_string(),
+                        egui::FontId::monospace(15.0),
+                        color,
+                    );
+                }
+            }
+        }
+
+        // Render Matrix Central Console Card over digital rain
         ui.vertical_centered(|ui| {
-            ui.heading(
-                egui::RichText::new("SYSTEM PAUSED // SCREEN BREAK")
-                    .size(38.0)
-                    .color(egui::Color32::from_rgb(34, 197, 94))
-                    .monospace()
-                    .strong(),
-            );
+            ui.add_space(20.0);
+            egui::Frame::none()
+                .fill(egui::Color32::from_rgba_unmultiplied(5, 20, 5, 220))
+                .rounding(16.0)
+                .stroke(egui::Stroke::new(1.5, egui::Color32::from_rgb(34, 197, 94)))
+                .inner_margin(egui::Margin::symmetric(36.0, 24.0))
+                .show(ui, |ui| {
+                    ui.heading(
+                        egui::RichText::new("SYSTEM PAUSED // SCREEN BREAK")
+                            .size(36.0)
+                            .color(egui::Color32::from_rgb(34, 197, 94))
+                            .monospace()
+                            .strong(),
+                    );
 
-            ui.add_space(24.0);
+                    ui.add_space(20.0);
 
-            ui.label(
-                egui::RichText::new(format!(
-                    "[{:02}:{:02}]",
-                    remaining_sec / 60,
-                    remaining_sec % 60
-                ))
-                .size(88.0)
-                .color(egui::Color32::from_rgb(74, 222, 128))
-                .monospace()
-                .strong(),
-            );
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "[{:02}:{:02}]",
+                            remaining_sec / 60,
+                            remaining_sec % 60
+                        ))
+                        .size(88.0)
+                        .color(egui::Color32::from_rgb(74, 222, 128))
+                        .monospace()
+                        .strong(),
+                    );
 
-            ui.add_space(16.0);
-            ui.label(
-                egui::RichText::new("> Stand up and stretch before returning to console.")
-                    .size(18.0)
-                    .color(egui::Color32::from_rgb(134, 239, 172))
-                    .monospace(),
-            );
+                    ui.add_space(16.0);
+                    ui.label(
+                        egui::RichText::new("> Stand up and stretch before returning to console.")
+                            .size(18.0)
+                            .color(egui::Color32::from_rgb(134, 239, 172))
+                            .monospace(),
+                    );
+                });
         });
     }
 }
@@ -167,6 +224,6 @@ pub fn get_background_color(style: ScreensaverStyle) -> egui::Color32 {
     match style {
         ScreensaverStyle::Default => egui::Color32::from_rgb(15, 23, 42),
         ScreensaverStyle::Minimalist => egui::Color32::from_rgb(8, 8, 8),
-        ScreensaverStyle::Matrix => egui::Color32::from_rgb(5, 15, 5),
+        ScreensaverStyle::Matrix => egui::Color32::from_rgb(4, 12, 4),
     }
 }
