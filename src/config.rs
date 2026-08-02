@@ -1,3 +1,4 @@
+use crate::screensaver::ScreensaverStyle;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -5,10 +6,18 @@ use std::path::PathBuf;
 
 pub const MASTER_PASSWORD: &str = "mindfulness";
 
+fn default_warning_time_seconds() -> u32 {
+    30
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub play_time_minutes: u32,
     pub pause_time_minutes: u32,
+    #[serde(default = "default_warning_time_seconds")]
+    pub warning_time_seconds: u32,
+    #[serde(default)]
+    pub screensaver_style: ScreensaverStyle,
     pub password_hash: String,
 }
 
@@ -17,6 +26,8 @@ impl Default for AppSettings {
         Self {
             play_time_minutes: 30,
             pause_time_minutes: 5,
+            warning_time_seconds: 30,
+            screensaver_style: ScreensaverStyle::Default,
             password_hash: hash_password("1234"),
         }
     }
@@ -95,5 +106,17 @@ mod tests {
         settings.set_password("secret99");
         assert!(settings.verify_password("secret99"));
         assert!(!settings.verify_password("1234"));
+    }
+
+    #[test]
+    fn test_warning_time_default() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.warning_time_seconds, 30);
+    }
+
+    #[test]
+    fn test_screensaver_style_default() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.screensaver_style, ScreensaverStyle::Default);
     }
 }

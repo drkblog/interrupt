@@ -1,8 +1,10 @@
 mod config;
+mod screensaver;
 mod win32;
 
 use config::AppSettings;
 use eframe::egui;
+use screensaver::{get_background_color, render_screensaver_style, ScreensaverStyle};
 use std::time::{Duration, Instant};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -23,9 +25,14 @@ pub struct InterruptApp {
     show_settings: bool,
     new_play_time: u32,
     new_pause_time: u32,
+    new_warning_time_seconds: u32,
+    new_screensaver_style: ScreensaverStyle,
     new_password_input: String,
     settings_message: Option<String>,
     focus_password_field: bool,
+    show_reset_dialog: bool,
+    reset_password_input: String,
+    reset_error_message: Option<String>,
 }
 
 impl InterruptApp {
@@ -33,6 +40,8 @@ impl InterruptApp {
         let settings = AppSettings::load();
         let new_play_time = settings.play_time_minutes;
         let new_pause_time = settings.pause_time_minutes;
+        let new_warning_time_seconds = settings.warning_time_seconds;
+        let new_screensaver_style = settings.screensaver_style;
 
         cc.egui_ctx.set_visuals(egui::Visuals::dark());
 
@@ -47,9 +56,14 @@ impl InterruptApp {
             show_settings: false,
             new_play_time,
             new_pause_time,
+            new_warning_time_seconds,
+            new_screensaver_style,
             new_password_input: String::new(),
             settings_message: None,
             focus_password_field: false,
+            show_reset_dialog: false,
+            reset_password_input: String::new(),
+            reset_error_message: None,
         }
     }
 
@@ -58,18 +72,19 @@ impl InterruptApp {
     }
 
     fn pause_duration(&self) -> Duration {
-        if cfg!(feature = "debug") {
-            Duration::from_secs(20)
-        } else {
-            Duration::from_secs((self.settings.pause_time_minutes as u64) * 60)
-        }
+        Duration::from_secs((self.settings.pause_time_minutes as u64) * 60)
     }
 
     fn warning_duration(&self) -> Duration {
-        Duration::from_secs(60)
+        Duration::from_secs(self.settings.warning_time_seconds as u64)
     }
 
     fn update_cycle_state(&mut self, ctx: &egui::Context) {
+        // While settings are open, global timer is suspended
+        if self.show_settings {
+            return;
+        }
+
         let elapsed = self.state_start.elapsed();
 
         match self.state {
@@ -114,7 +129,10 @@ impl InterruptApp {
         let rect = win32::get_virtual_screen_rect();
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::AlwaysOnTop));
-        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(rect.width as f32, rect.height as f32)));
+        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
+            rect.width as f32,
+            rect.height as f32,
+        )));
         ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
         win32::make_app_window_fullscreen_topmost();
     }
@@ -128,7 +146,7 @@ impl InterruptApp {
 
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::Normal));
-        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(540.0, 360.0)));
+        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(540.0, 420.0)));
         win32::restore_app_window_normal();
         win32::restore_foreground_window();
     }
@@ -138,6 +156,18 @@ impl InterruptApp {
             self.transition_to_play(ctx);
         } else {
             self.password_error = Some("Incorrect password. Please try again.".to_string());
+        }
+    }
+
+    fn try_reset_timer(&mut self) {
+        if self.settings.verify_password(&self.reset_password_input) {
+            self.state = AppState::Play;
+            self.state_start = Instant::now();
+            self.show_reset_dialog = false;
+            self.reset_password_input.clear();
+            self.reset_error_message = None;
+        } else {
+            self.reset_error_message = Some("Invalid password.".to_string());
         }
     }
 
@@ -190,53 +220,26 @@ impl InterruptApp {
             0
         };
 
+        let bg_color = get_background_color(self.settings.screensaver_style);
+
         egui::CentralPanel::default()
-            .frame(egui::Frame::none().fill(egui::Color32::from_rgb(15, 23, 42)))
+            .frame(egui::Frame::none().fill(bg_color))
             .show(ctx, |ui| {
                 let available_height = ui.available_height();
 
                 ui.vertical_centered(|ui| {
-                    ui.add_space(available_height * 0.18);
+                    ui.add_space(available_height * 0.14);
 
-                    ui.heading(
-                        egui::RichText::new("🌿 TIME TO TAKE A BREAK")
-                            .size(42.0)
-                            .color(egui::Color32::from_rgb(56, 189, 248))
-                            .strong(),
-                    );
-
-                    ui.add_space(12.0);
-                    let subtitle = if cfg!(feature = "debug") {
-                        "DEBUG MODE: Auto-unlocking in 20 seconds."
-                    } else {
-                        "Step away, stretch, drink water, and rest your eyes."
-                    };
-                    ui.label(
-                        egui::RichText::new(subtitle)
-                            .size(20.0)
-                            .color(if cfg!(feature = "debug") {
-                                egui::Color32::YELLOW
-                            } else {
-                                egui::Color32::from_rgb(203, 213, 225)
-                            }),
-                    );
-
-                    ui.add_space(32.0);
-
-                    ui.label(
-                        egui::RichText::new(format!(
-                            "{:02}:{:02}",
-                            remaining_sec / 60,
-                            remaining_sec % 60
-                        ))
-                        .size(86.0)
-                        .color(egui::Color32::WHITE)
-                        .monospace()
-                        .strong(),
+                    // Render modular visual screensaver component
+                    render_screensaver_style(
+                        self.settings.screensaver_style,
+                        ui,
+                        remaining_sec,
                     );
 
                     ui.add_space(40.0);
 
+                    // Reused unblock panel component across all screensavers
                     egui::Frame::none()
                         .fill(egui::Color32::from_rgb(30, 41, 59))
                         .rounding(12.0)
@@ -305,6 +308,52 @@ impl InterruptApp {
             });
     }
 
+    fn render_reset_dialog(&mut self, ctx: &egui::Context) {
+        if !self.show_reset_dialog {
+            return;
+        }
+
+        let mut open = self.show_reset_dialog;
+        egui::Window::new("🔄 Reset Timer")
+            .open(&mut open)
+            .resizable(false)
+            .collapsible(false)
+            .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+            .show(ctx, |ui| {
+                ui.label("Enter password to reset the play timer:");
+                ui.add_space(8.0);
+
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut self.reset_password_input)
+                        .password(true)
+                        .hint_text("Password..."),
+                );
+
+                if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                    self.try_reset_timer();
+                }
+
+                ui.add_space(8.0);
+
+                ui.horizontal(|ui| {
+                    if ui.button("Confirm Reset").clicked() {
+                        self.try_reset_timer();
+                    }
+                    if ui.button("Cancel").clicked() {
+                        self.show_reset_dialog = false;
+                        self.reset_password_input.clear();
+                        self.reset_error_message = None;
+                    }
+                });
+
+                if let Some(ref err) = self.reset_error_message {
+                    ui.add_space(8.0);
+                    ui.label(egui::RichText::new(err).color(egui::Color32::LIGHT_RED));
+                }
+            });
+        self.show_reset_dialog = open;
+    }
+
     fn render_settings_window(&mut self, ctx: &egui::Context) {
         if !self.show_settings {
             return;
@@ -355,6 +404,12 @@ impl InterruptApp {
                     }
                 } else {
                     ui.heading("Configure Break Cycles");
+                    ui.add_space(4.0);
+                    ui.label(
+                        egui::RichText::new("⏸️ Timer suspended while settings window is open")
+                            .color(egui::Color32::YELLOW)
+                            .size(13.0),
+                    );
                     ui.add_space(8.0);
 
                     egui::Grid::new("settings_grid")
@@ -369,8 +424,32 @@ impl InterruptApp {
                             ui.add(egui::DragValue::new(&mut self.new_pause_time).range(1..=60));
                             ui.end_row();
 
+                            ui.label("Warning Time (seconds):");
+                            ui.add(
+                                egui::DragValue::new(&mut self.new_warning_time_seconds)
+                                    .range(5..=300),
+                            );
+                            ui.end_row();
+
+                            ui.label("Screensaver Style:");
+                            egui::ComboBox::from_id_source("screensaver_style_selector")
+                                .selected_text(self.new_screensaver_style.name())
+                                .show_ui(ui, |ui| {
+                                    for style in ScreensaverStyle::all() {
+                                        ui.selectable_value(
+                                            &mut self.new_screensaver_style,
+                                            *style,
+                                            style.name(),
+                                        );
+                                    }
+                                });
+                            ui.end_row();
+
                             ui.label("New Password (optional):");
-                            ui.add(egui::TextEdit::singleline(&mut self.new_password_input).password(true));
+                            ui.add(
+                                egui::TextEdit::singleline(&mut self.new_password_input)
+                                    .password(true),
+                            );
                             ui.end_row();
                         });
 
@@ -380,6 +459,8 @@ impl InterruptApp {
                         if ui.button("💾 Save Settings").clicked() {
                             self.settings.play_time_minutes = self.new_play_time;
                             self.settings.pause_time_minutes = self.new_pause_time;
+                            self.settings.warning_time_seconds = self.new_warning_time_seconds;
+                            self.settings.screensaver_style = self.new_screensaver_style;
                             if !self.new_password_input.trim().is_empty() {
                                 self.settings.set_password(&self.new_password_input);
                                 self.new_password_input.clear();
@@ -387,13 +468,14 @@ impl InterruptApp {
                             if let Err(e) = self.settings.save() {
                                 self.settings_message = Some(format!("Failed to save: {}", e));
                             } else {
-                                self.settings_message = Some("Settings saved successfully!".to_string());
+                                self.settings_message =
+                                    Some("Settings saved successfully!".to_string());
                             }
                         }
 
                         if ui.button("🔒 Lock Screen Now").clicked() {
-                            self.transition_to_pause(ctx);
                             self.show_settings = false;
+                            self.transition_to_pause(ctx);
                         }
                     });
 
@@ -409,31 +491,53 @@ impl InterruptApp {
 
 impl eframe::App for InterruptApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.update_cycle_state(ctx);
+        // Freeze timer accumulation if settings window is active
+        if self.show_settings {
+            let dt = Duration::from_secs_f32(ctx.input(|i| i.stable_dt));
+            self.state_start += dt;
+        } else {
+            self.update_cycle_state(ctx);
+        }
 
         if self.state == AppState::Play || self.state == AppState::Warning {
+            let play_dur = self.play_duration();
+            let elapsed = self.state_start.elapsed();
+            let remaining_sec = if play_dur > elapsed {
+                (play_dur - elapsed).as_secs()
+            } else {
+                0
+            };
+
             egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     ui.heading("⏱️ Interrupt");
                     ui.separator();
 
-                    let play_dur = self.play_duration();
-                    let elapsed = self.state_start.elapsed();
-                    let remaining_sec = if play_dur > elapsed {
-                        (play_dur - elapsed).as_secs()
+                    let status_text = if self.show_settings {
+                        format!(
+                            "Play Mode [PAUSED] | Next break in {:02}:{:02}",
+                            remaining_sec / 60,
+                            remaining_sec % 60
+                        )
                     } else {
-                        0
+                        format!(
+                            "Play Mode | Next break in {:02}:{:02}",
+                            remaining_sec / 60,
+                            remaining_sec % 60
+                        )
                     };
 
-                    ui.label(format!(
-                        "Play Mode | Next break in {:02}:{:02}",
-                        remaining_sec / 60,
-                        remaining_sec % 60
-                    ));
+                    ui.label(status_text);
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         if ui.button("⚙️ Settings").clicked() {
                             self.show_settings = true;
+                        }
+                        if ui.button("🔒 Lock Now").clicked() {
+                            self.transition_to_pause(ctx);
+                        }
+                        if ui.button("🔄 Reset Timer").clicked() {
+                            self.show_reset_dialog = true;
                         }
                     });
                 });
@@ -441,19 +545,78 @@ impl eframe::App for InterruptApp {
 
             egui::CentralPanel::default().show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
-                    ui.add_space(40.0);
+                    ui.add_space(20.0);
                     ui.heading("Interrupt Screen Time Manager");
-                    ui.add_space(12.0);
-                    ui.label("Active cycle running. Keep this window minimized or running in background.");
+                    ui.add_space(8.0);
+                    let sub_label = if self.show_settings {
+                        "Settings open — timer suspended until settings window is closed."
+                    } else {
+                        "Active cycle running. Time remaining until next screen lock:"
+                    };
+                    ui.label(sub_label);
                     ui.add_space(16.0);
+
+                    // Prominent Live Timer Display
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{:02}:{:02}",
+                            remaining_sec / 60,
+                            remaining_sec % 60
+                        ))
+                        .size(64.0)
+                        .color(if self.show_settings {
+                            egui::Color32::YELLOW
+                        } else if self.state == AppState::Warning {
+                            egui::Color32::LIGHT_RED
+                        } else {
+                            egui::Color32::from_rgb(56, 189, 248)
+                        })
+                        .monospace()
+                        .strong(),
+                    );
+
+                    ui.add_space(20.0);
+
+                    ui.horizontal(|ui| {
+                        ui.add_space(100.0);
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    egui::RichText::new("🔒 Lock Now").size(16.0).strong(),
+                                )
+                                .min_size(egui::vec2(140.0, 36.0)),
+                            )
+                            .clicked()
+                        {
+                            self.transition_to_pause(ctx);
+                        }
+                        ui.add_space(12.0);
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    egui::RichText::new("🔄 Reset Timer")
+                                        .size(16.0)
+                                        .strong(),
+                                )
+                                .min_size(egui::vec2(140.0, 36.0)),
+                            )
+                            .clicked()
+                        {
+                            self.show_reset_dialog = true;
+                        }
+                    });
+
+                    ui.add_space(20.0);
                     ui.label(format!("• Play Time: {} mins", self.settings.play_time_minutes));
                     ui.label(format!("• Pause Time: {} mins", self.settings.pause_time_minutes));
+                    ui.label(format!("• Warning Time: {} secs", self.settings.warning_time_seconds));
+                    ui.label(format!("• Screensaver: {}", self.settings.screensaver_style.name()));
                     ui.label("• Master Password: enabled ('mindfulness')");
                 });
             });
         }
 
-        if self.state == AppState::Warning {
+        if self.state == AppState::Warning && !self.show_settings {
             self.render_warning_banner(ctx);
         }
 
@@ -461,6 +624,7 @@ impl eframe::App for InterruptApp {
             self.render_pause_screen(ctx);
         }
 
+        self.render_reset_dialog(ctx);
         self.render_settings_window(ctx);
 
         ctx.request_repaint_after(Duration::from_millis(500));
@@ -471,8 +635,8 @@ fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Interrupt - Healthy Screen Breaks")
-            .with_inner_size([540.0, 360.0])
-            .with_min_inner_size([400.0, 300.0]),
+            .with_inner_size([540.0, 420.0])
+            .with_min_inner_size([400.0, 350.0]),
         ..Default::default()
     };
 

@@ -9,8 +9,15 @@ It periodically cycles between **Play Time** (unlocked computer access) and **Pa
 ## ✨ Features
 
 - **Automated Time Cycles**: Set custom **Play Time** (e.g. 30 minutes) and **Pause Time** (e.g. 5 minutes).
-- **1-Minute Warning Banner**: Displays a floating red top banner 60 seconds before locking with a live countdown so the user can finish what they are doing.
-- **Ambient Dark Screensaver**: Fullscreen dark overlay spanning across all connected monitors when pause time begins.
+- **Timer Suspension in Settings**: The play/pause timer is automatically suspended whenever the settings window is open.
+- **Selectable Screensavers**: Choose between multiple screensaver styles:
+  - **Default**: Ambient Slate dark theme with relaxation text and large timer.
+  - **Minimalist**: Sleek monochrome dark theme with quiet typography.
+  - **Matrix**: Glowing green digital theme.
+- **Modular Component Architecture**: Extensible `ScreensaverComponent` trait that reuses unblock UI, keyboard hooks, and window focus management across all screensaver styles.
+- **Configurable Warning Banner**: Displays a floating red banner before locking with a configurable countdown (default: 30 seconds).
+- **Live Countdown Display**: Prominent live timer in the main UI showing exact time left before locking.
+- **Lock Now & Reset Timer Buttons**: Manually trigger screen lock anytime, or reset the play timer with password authentication.
 - **Strict Keyboard Enforcement**: Low-level Windows keyboard hook (`WH_KEYBOARD_LL`) blocks task switching (`Alt+Tab`, `Win key`, `Alt+Esc`, `Ctrl+Esc`, `Alt+F4`) during break time.
 - **Focus Restoration**: Automatically restores focus to the exact application and window that was being used before the screen locked.
 - **Password Protection**: Prevents unblocking or changing settings without the user password or master password.
@@ -24,6 +31,8 @@ It periodically cycles between **Play Time** (unlocked computer access) and **Pa
 ### Default Settings
 - **Play Time**: 30 minutes
 - **Pause Time**: 5 minutes
+- **Warning Time**: 30 seconds
+- **Screensaver Style**: Default (Ambient Slate)
 - **Default Password**: `1234`
 - **Master Password**: `mindfulness`
 
@@ -34,6 +43,8 @@ When the pause screen is active, the computer will remain locked until the pause
 Click the **⚙️ Settings** button in the main window or settings menu, enter the password to authenticate, and adjust:
 - Play duration (in minutes)
 - Pause duration (in minutes)
+- Warning duration (in seconds, default 30s)
+- Screensaver style (`Default`, `Minimalist`, `Matrix`)
 - Custom user password
 
 ---
@@ -49,17 +60,11 @@ Click the **⚙️ Settings** button in the main window or settings menu, enter 
 git clone https://github.com/drkblog/interrupt.git
 cd interrupt
 
-# Run standard application
+# Run application
 cargo run
-
-# Run with debug mode (forces 20-second auto-unlock pause screen)
-cargo run --features debug
 
 # Build release executable
 cargo build --release
-
-# Build release executable with debug mode enabled
-cargo build --release --features debug
 ```
 
 The compiled executable will be available at `target/release/interrupt.exe`.
