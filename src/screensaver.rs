@@ -43,22 +43,22 @@ pub struct DefaultScreensaver;
 
 impl ScreensaverComponent for DefaultScreensaver {
     fn render_visuals(&mut self, ui: &mut egui::Ui, remaining_sec: u64) {
-        let available_rect = ui.available_rect_before_wrap();
+        let screen_rect = ui.ctx().screen_rect();
         let time = ui.input(|i| i.time);
         let painter = ui.painter();
 
-        // 1. Draw floating ambient particles/orbs drifting upwards softly
+        // 1. Draw floating ambient particles/orbs drifting across full screen height
         let num_particles = 28;
         for i in 0..num_particles {
             let seed = (i * 31 + 7) as f64;
             let speed = 22.0 + (seed % 35.0) as f32;
             let radius = 6.0 + (seed % 14.0) as f32;
-            let x_base = available_rect.min.x + ((seed * 73.0) as f32 % available_rect.width());
+            let x_base = screen_rect.min.x + ((seed * 73.0) as f32 % screen_rect.width());
             let x_sway = (time * 0.6 + seed).sin() as f32 * 22.0;
             let x = x_base + x_sway;
 
-            let loop_height = available_rect.height() + 80.0;
-            let y = available_rect.max.y
+            let loop_height = screen_rect.height() + 80.0;
+            let y = screen_rect.max.y
                 - ((time as f32 * speed + (seed * 47.0) as f32) % loop_height);
 
             let pulse_alpha = ((time * 1.5 + seed).sin() * 0.35 + 0.55) as f32;
@@ -97,10 +97,10 @@ impl ScreensaverComponent for DefaultScreensaver {
             ("😮‍💨 Exhale slowly...", egui::Color32::from_rgb(52, 211, 153))
         };
 
-        // 3. Central Relaxation Glass Card (Strictly Constrained Width)
+        // 3. Central Relaxation Glass Card
         ui.vertical_centered(|ui| {
             ui.add_space(20.0);
-            let max_card_width = (available_rect.width() - 40.0).clamp(280.0, 620.0);
+            let max_card_width = (screen_rect.width() - 40.0).clamp(280.0, 620.0);
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_unmultiplied(15, 23, 42, 225))
                 .rounding(20.0)
@@ -190,12 +190,12 @@ impl ScreensaverComponent for MinimalistScreensaver {
     }
 }
 
-// 3. Matrix Digital Rain Screensaver Component (Strictly Constrained Width)
+// 3. Matrix Digital Rain Screensaver Component (Full Screen Bounds)
 pub struct MatrixScreensaver;
 
 impl ScreensaverComponent for MatrixScreensaver {
     fn render_visuals(&mut self, ui: &mut egui::Ui, remaining_sec: u64) {
-        let available_rect = ui.available_rect_before_wrap();
+        let screen_rect = ui.ctx().screen_rect();
         let time = ui.input(|i| i.time);
         let painter = ui.painter();
 
@@ -208,11 +208,11 @@ impl ScreensaverComponent for MatrixScreensaver {
         ];
 
         let col_width = 20.0;
-        let num_cols = (available_rect.width() / col_width) as usize;
+        let num_cols = (screen_rect.width() / col_width) as usize;
 
-        // Render Multi-Layered Matrix Digital Rain
+        // Render Multi-Layered Matrix Digital Rain across full screen height (y = 0 to screen height)
         for c in 0..num_cols {
-            let x = available_rect.min.x + c as f32 * col_width;
+            let x = screen_rect.min.x + c as f32 * col_width;
             let seed = (c * 43 + 19) as f64;
 
             // Determine if column is foreground (bright/fast) or background (dim/slow)
@@ -231,13 +231,13 @@ impl ScreensaverComponent for MatrixScreensaver {
             };
 
             let total_stream_height = length as f32 * char_height;
-            let loop_height = available_rect.height() + total_stream_height;
+            let loop_height = screen_rect.height() + total_stream_height;
             let y_head =
                 ((time as f32 * speed + (seed * 23.0) as f32) % loop_height) - total_stream_height;
 
             for i in 0..length {
                 let y = y_head - i as f32 * char_height;
-                if y >= available_rect.min.y - char_height && y <= available_rect.max.y {
+                if y >= screen_rect.min.y - char_height && y <= screen_rect.max.y {
                     // Dynamically flicker characters over time
                     let char_idx = (seed as usize + i * 11 + (time * 9.0) as usize) % chars.len();
                     let ch = chars[char_idx];
@@ -267,10 +267,10 @@ impl ScreensaverComponent for MatrixScreensaver {
             }
         }
 
-        // Render Matrix Central Console Card (Strictly Constrained Width)
+        // Render Matrix Central Console Card
         ui.vertical_centered(|ui| {
             ui.add_space(20.0);
-            let max_card_width = (available_rect.width() - 40.0).clamp(280.0, 620.0);
+            let max_card_width = (screen_rect.width() - 40.0).clamp(280.0, 620.0);
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_unmultiplied(2, 12, 4, 235))
                 .rounding(16.0)
