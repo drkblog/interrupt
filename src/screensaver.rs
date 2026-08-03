@@ -97,9 +97,10 @@ impl ScreensaverComponent for DefaultScreensaver {
             ("😮‍💨 Exhale slowly...", egui::Color32::from_rgb(52, 211, 153))
         };
 
-        // 3. Central Relaxation Glass Card
+        // 3. Central Relaxation Glass Card (Strictly Constrained Width)
         ui.vertical_centered(|ui| {
             ui.add_space(20.0);
+            let max_card_width = (available_rect.width() - 40.0).clamp(280.0, 620.0);
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_unmultiplied(15, 23, 42, 225))
                 .rounding(20.0)
@@ -107,11 +108,12 @@ impl ScreensaverComponent for DefaultScreensaver {
                     1.5,
                     egui::Color32::from_rgba_unmultiplied(56, 189, 248, 140),
                 ))
-                .inner_margin(egui::Margin::symmetric(40.0, 28.0))
+                .inner_margin(egui::Margin::symmetric(32.0, 24.0))
                 .show(ui, |ui| {
+                    ui.set_max_width(max_card_width);
                     ui.heading(
                         egui::RichText::new("🌿 TIME TO TAKE A BREAK")
-                            .size(42.0)
+                            .size(36.0)
                             .color(egui::Color32::from_rgb(56, 189, 248))
                             .strong(),
                     );
@@ -119,11 +121,11 @@ impl ScreensaverComponent for DefaultScreensaver {
                     ui.add_space(12.0);
                     ui.label(
                         egui::RichText::new("Step away, stretch, drink water, and rest your eyes.")
-                            .size(20.0)
+                            .size(18.0)
                             .color(egui::Color32::from_rgb(203, 213, 225)),
                     );
 
-                    ui.add_space(28.0);
+                    ui.add_space(24.0);
 
                     // Large Glowing Countdown Timer
                     ui.label(
@@ -132,7 +134,7 @@ impl ScreensaverComponent for DefaultScreensaver {
                             remaining_sec / 60,
                             remaining_sec % 60
                         ))
-                        .size(88.0)
+                        .size(80.0)
                         .color(egui::Color32::WHITE)
                         .monospace()
                         .strong(),
@@ -143,7 +145,7 @@ impl ScreensaverComponent for DefaultScreensaver {
                     // Guided Breathing Indicator Text
                     ui.label(
                         egui::RichText::new(breath_label)
-                            .size(22.0)
+                            .size(20.0)
                             .color(breath_color)
                             .strong(),
                     );
@@ -188,7 +190,7 @@ impl ScreensaverComponent for MinimalistScreensaver {
     }
 }
 
-// 3. Matrix Digital Rain Screensaver Component (Enhanced Visuals)
+// 3. Matrix Digital Rain Screensaver Component (Strictly Constrained Width)
 pub struct MatrixScreensaver;
 
 impl ScreensaverComponent for MatrixScreensaver {
@@ -265,24 +267,26 @@ impl ScreensaverComponent for MatrixScreensaver {
             }
         }
 
-        // Render Matrix Central Console Card over digital rain
+        // Render Matrix Central Console Card (Strictly Constrained Width)
         ui.vertical_centered(|ui| {
             ui.add_space(20.0);
+            let max_card_width = (available_rect.width() - 40.0).clamp(280.0, 620.0);
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_unmultiplied(2, 12, 4, 235))
                 .rounding(16.0)
                 .stroke(egui::Stroke::new(2.0, egui::Color32::from_rgb(34, 197, 94)))
-                .inner_margin(egui::Margin::symmetric(36.0, 24.0))
+                .inner_margin(egui::Margin::symmetric(32.0, 24.0))
                 .show(ui, |ui| {
+                    ui.set_max_width(max_card_width);
                     ui.heading(
                         egui::RichText::new("SYSTEM PAUSED // SCREEN BREAK")
-                            .size(36.0)
+                            .size(30.0)
                             .color(egui::Color32::from_rgb(34, 197, 94))
                             .monospace()
                             .strong(),
                     );
 
-                    ui.add_space(20.0);
+                    ui.add_space(16.0);
 
                     // Pulse glow effect on timer clock
                     let pulse = (time * 2.5).sin().abs() as f32;
@@ -298,16 +302,16 @@ impl ScreensaverComponent for MatrixScreensaver {
                             remaining_sec / 60,
                             remaining_sec % 60
                         ))
-                        .size(88.0)
+                        .size(80.0)
                         .color(clock_color)
                         .monospace()
                         .strong(),
                     );
 
-                    ui.add_space(16.0);
+                    ui.add_space(14.0);
                     ui.label(
                         egui::RichText::new("> Stand up and stretch before returning to console.")
-                            .size(18.0)
+                            .size(16.0)
                             .color(egui::Color32::from_rgb(134, 239, 172))
                             .monospace(),
                     );
