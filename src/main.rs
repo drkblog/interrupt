@@ -253,9 +253,9 @@ impl InterruptApp {
         };
 
         let lock_elapsed = self.state_start.elapsed();
-        let lock_grace_period = Duration::from_secs(10);
+        let lock_grace_period = Duration::from_secs(3);
 
-        // Only detect user interaction after the initial 10-second lock grace period
+        // Only detect user interaction after the initial 3-second lock grace period
         if lock_elapsed >= lock_grace_period {
             let is_interacting = ctx.input(|i| {
                 i.pointer.any_click()
@@ -549,6 +549,7 @@ impl InterruptApp {
                             } else {
                                 self.settings_message =
                                     Some("Settings saved successfully!".to_string());
+                                self.close_settings();
                             }
                         }
 

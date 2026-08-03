@@ -25,7 +25,7 @@ impl ScreensaverStyle {
 
     pub fn name(&self) -> &'static str {
         match self {
-            ScreensaverStyle::Default => "Default (Ambient Slate)",
+            ScreensaverStyle::Default => "Default (Ambient Aurora)",
             ScreensaverStyle::Minimalist => "Minimalist (Monochrome Dark)",
             ScreensaverStyle::Matrix => "Matrix (Digital Green Rain)",
         }
@@ -38,39 +38,116 @@ pub trait ScreensaverComponent {
     fn render_visuals(&mut self, ui: &mut egui::Ui, remaining_sec: u64);
 }
 
-// 1. Default Screensaver Component
+// 1. Default Screensaver Component (Breathing Aurora & Floating Orbs)
 pub struct DefaultScreensaver;
 
 impl ScreensaverComponent for DefaultScreensaver {
     fn render_visuals(&mut self, ui: &mut egui::Ui, remaining_sec: u64) {
+        let available_rect = ui.available_rect_before_wrap();
+        let time = ui.input(|i| i.time);
+        let painter = ui.painter();
+
+        // 1. Draw floating ambient particles/orbs drifting upwards softly
+        let num_particles = 28;
+        for i in 0..num_particles {
+            let seed = (i * 31 + 7) as f64;
+            let speed = 22.0 + (seed % 35.0) as f32;
+            let radius = 6.0 + (seed % 14.0) as f32;
+            let x_base = available_rect.min.x + ((seed * 73.0) as f32 % available_rect.width());
+            let x_sway = (time * 0.6 + seed).sin() as f32 * 22.0;
+            let x = x_base + x_sway;
+
+            let loop_height = available_rect.height() + 80.0;
+            let y = available_rect.max.y
+                - ((time as f32 * speed + (seed * 47.0) as f32) % loop_height);
+
+            let pulse_alpha = ((time * 1.5 + seed).sin() * 0.35 + 0.55) as f32;
+            let color = match i % 3 {
+                0 => egui::Color32::from_rgba_unmultiplied(
+                    56,
+                    189,
+                    248,
+                    (120.0 * pulse_alpha) as u8,
+                ), // Sky Blue
+                1 => egui::Color32::from_rgba_unmultiplied(
+                    168,
+                    85,
+                    247,
+                    (100.0 * pulse_alpha) as u8,
+                ), // Purple
+                _ => egui::Color32::from_rgba_unmultiplied(
+                    52,
+                    211,
+                    153,
+                    (110.0 * pulse_alpha) as u8,
+                ), // Emerald
+            };
+
+            painter.circle_filled(egui::pos2(x, y), radius, color);
+        }
+
+        // 2. Guided Breathing Cycle State (3s Inhale -> 2s Hold -> 6s Exhale)
+        let cycle_period = 11.0;
+        let cycle_time = (time % cycle_period) as f32;
+        let (breath_label, breath_color) = if cycle_time < 3.0 {
+            ("🫁 Inhale deeply...", egui::Color32::from_rgb(56, 189, 248))
+        } else if cycle_time < 5.0 {
+            ("⏸️ Hold...", egui::Color32::from_rgb(168, 85, 247))
+        } else {
+            ("😮‍💨 Exhale slowly...", egui::Color32::from_rgb(52, 211, 153))
+        };
+
+        // 3. Central Relaxation Glass Card
         ui.vertical_centered(|ui| {
-            ui.heading(
-                egui::RichText::new("🌿 TIME TO TAKE A BREAK")
-                    .size(42.0)
-                    .color(egui::Color32::from_rgb(56, 189, 248))
-                    .strong(),
-            );
-
-            ui.add_space(12.0);
-            ui.label(
-                egui::RichText::new("Step away, stretch, drink water, and rest your eyes.")
-                    .size(20.0)
-                    .color(egui::Color32::from_rgb(203, 213, 225)),
-            );
-
-            ui.add_space(32.0);
-
-            ui.label(
-                egui::RichText::new(format!(
-                    "{:02}:{:02}",
-                    remaining_sec / 60,
-                    remaining_sec % 60
+            ui.add_space(20.0);
+            egui::Frame::none()
+                .fill(egui::Color32::from_rgba_unmultiplied(15, 23, 42, 225))
+                .rounding(20.0)
+                .stroke(egui::Stroke::new(
+                    1.5,
+                    egui::Color32::from_rgba_unmultiplied(56, 189, 248, 140),
                 ))
-                .size(86.0)
-                .color(egui::Color32::WHITE)
-                .monospace()
-                .strong(),
-            );
+                .inner_margin(egui::Margin::symmetric(40.0, 28.0))
+                .show(ui, |ui| {
+                    ui.heading(
+                        egui::RichText::new("🌿 TIME TO TAKE A BREAK")
+                            .size(42.0)
+                            .color(egui::Color32::from_rgb(56, 189, 248))
+                            .strong(),
+                    );
+
+                    ui.add_space(12.0);
+                    ui.label(
+                        egui::RichText::new("Step away, stretch, drink water, and rest your eyes.")
+                            .size(20.0)
+                            .color(egui::Color32::from_rgb(203, 213, 225)),
+                    );
+
+                    ui.add_space(28.0);
+
+                    // Large Glowing Countdown Timer
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{:02}:{:02}",
+                            remaining_sec / 60,
+                            remaining_sec % 60
+                        ))
+                        .size(88.0)
+                        .color(egui::Color32::WHITE)
+                        .monospace()
+                        .strong(),
+                    );
+
+                    ui.add_space(16.0);
+
+                    // Guided Breathing Indicator Text
+                    ui.label(
+                        egui::RichText::new(breath_label)
+                            .size(22.0)
+                            .color(breath_color)
+                            .strong(),
+                    );
+                });
         });
     }
 }
@@ -153,7 +230,8 @@ impl ScreensaverComponent for MatrixScreensaver {
 
             let total_stream_height = length as f32 * char_height;
             let loop_height = available_rect.height() + total_stream_height;
-            let y_head = ((time as f32 * speed + (seed * 23.0) as f32) % loop_height) - total_stream_height;
+            let y_head =
+                ((time as f32 * speed + (seed * 23.0) as f32) % loop_height) - total_stream_height;
 
             for i in 0..length {
                 let y = y_head - i as f32 * char_height;
@@ -189,16 +267,16 @@ impl ScreensaverComponent for MatrixScreensaver {
 
         // Render Matrix Central Console Card over digital rain
         ui.vertical_centered(|ui| {
-            ui.add_space(24.0);
+            ui.add_space(20.0);
             egui::Frame::none()
                 .fill(egui::Color32::from_rgba_unmultiplied(2, 12, 4, 235))
                 .rounding(16.0)
                 .stroke(egui::Stroke::new(2.0, egui::Color32::from_rgb(34, 197, 94)))
-                .inner_margin(egui::Margin::symmetric(40.0, 28.0))
+                .inner_margin(egui::Margin::symmetric(36.0, 24.0))
                 .show(ui, |ui| {
                     ui.heading(
                         egui::RichText::new("SYSTEM PAUSED // SCREEN BREAK")
-                            .size(38.0)
+                            .size(36.0)
                             .color(egui::Color32::from_rgb(34, 197, 94))
                             .monospace()
                             .strong(),
@@ -220,7 +298,7 @@ impl ScreensaverComponent for MatrixScreensaver {
                             remaining_sec / 60,
                             remaining_sec % 60
                         ))
-                        .size(92.0)
+                        .size(88.0)
                         .color(clock_color)
                         .monospace()
                         .strong(),

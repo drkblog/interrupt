@@ -23,7 +23,8 @@ src/
 
 2. **Modular Screensavers (`src/screensaver.rs`)**:
    - Implements `ScreensaverComponent` trait for visual screensaver rendering (`Default`, `Minimalist`, `Matrix`).
-   - `MatrixScreensaver` renders a smooth 60 FPS animated digital rain with glowing green characters and trailing streams.
+   - `DefaultScreensaver` renders a 60 FPS breathing aurora with floating particles and guided breathing indicator (`Inhale 3s` -> `Hold 2s` -> `Exhale 6s`).
+   - `MatrixScreensaver` renders a smooth 60 FPS animated digital rain with glowing green Katakana characters and trailing streams.
    - Outer shell in `render_pause_screen` handles input focus, password verification, and OS window level, making it trivial to add new screensavers while reusing all unblock mechanics.
 
 3. **Windows API Integration (`src/win32.rs`)**:
@@ -34,7 +35,7 @@ src/
 4. **Application State Machine (`src/main.rs`)**:
    - **`AppState::Play`**: Normal computer usage. Displays prominent live countdown timer (`MM:SS`), "🔒 Lock Now", and password-protected "🔄 Reset Timer" buttons.
    - **`AppState::Warning`**: Triggered `warning_time_seconds` (default 30s) before pause time. Displays floating red warning banner with live countdown.
-   - **`AppState::Pause`**: Fullscreen topmost dark overlay covering all virtual screen space. Password box is hidden on initial lock without stealing focus; initial 10-second grace period ignores interactions so mouse jitter does not trigger the password prompt immediately. After 10s, user interaction (mouse move/click, keypress) reveals and focuses the unblock panel. Automatically hides after 20s of inactivity.
+   - **`AppState::Pause`**: Fullscreen topmost dark overlay covering all virtual screen space. Password box is hidden on initial lock without stealing focus; initial 3-second grace period ignores interactions so mouse jitter does not trigger the password prompt immediately. After 3s, user interaction (mouse move/click, keypress) reveals and focuses the unblock panel. Automatically hides after 20s of inactivity.
    - **Timer Suspension**: While the settings window is open (`show_settings = true`), elapsed timer accumulation is suspended so editing settings does not count against play/break duration.
 
 ## Building and Testing
@@ -50,6 +51,7 @@ src/
 - **Build Release Binary**: `cargo build --release`
 
 ## Critical Rules for Agents
+- **Screensaver Behavior Isolation**: All screensaver variants MUST remain purely visual implementations of the `ScreensaverComponent` trait. The outer container (`render_pause_screen`) MUST handle input focus, password verification, window levels, initial 3-second interaction grace period, 20-second inactivity auto-hide, and unblock mechanics. NEVER alter or duplicate screen lock enforcement logic within individual screensaver variants.
 - **Preserve Keyboard Hook Safety**: Always guarantee `disable_keyboard_hook()` is invoked whenever exiting `Pause` state or unblocking.
 - **Preserve Focus Restoration**: Ensure `capture_foreground_window()` is called right before entering `Pause` state.
 - **Master Password**: Never remove or change the `MASTER_PASSWORD = "mindfulness"` constant.

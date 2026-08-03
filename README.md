@@ -11,9 +11,9 @@ It periodically cycles between **Play Time** (unlocked computer access) and **Pa
 - **Automated Time Cycles**: Set custom **Play Time** (e.g. 30 minutes) and **Pause Time** (e.g. 5 minutes).
 - **Timer Suspension in Settings**: The play/pause timer is automatically suspended whenever the settings window is open.
 - **Selectable Screensavers**: Choose between multiple screensaver styles:
-  - **Default**: Ambient Slate dark theme with relaxation text and large timer.
+  - **Default**: Ambient Aurora dark theme with floating particles and guided breathing indicator (`3s Inhale` -> `2s Hold` -> `6s Exhale`).
   - **Minimalist**: Sleek monochrome dark theme with quiet typography.
-  - **Matrix**: Glowing green digital theme.
+  - **Matrix**: Animated green Katakana digital rain theme.
 - **Modular Component Architecture**: Extensible `ScreensaverComponent` trait that reuses unblock UI, keyboard hooks, and window focus management across all screensaver styles.
 - **Configurable Warning Banner**: Displays a floating red banner before locking with a configurable countdown (default: 30 seconds).
 - **Live Countdown Display**: Prominent live timer in the main UI showing exact time left before locking.
@@ -28,24 +28,32 @@ It periodically cycles between **Play Time** (unlocked computer access) and **Pa
 
 ## 🛠️ Usage & Configuration
 
-### Default Settings
-- **Play Time**: 30 minutes
-- **Pause Time**: 5 minutes
-- **Warning Time**: 30 seconds
-- **Screensaver Style**: Default (Ambient Slate)
-- **Default Password**: `1234`
-- **Master Password**: `mindfulness`
+### Configurable Settings
+- **Play Time (`play_time_minutes`)**: Duration of computer play time in minutes (default: 30 mins).
+- **Pause Time (`pause_time_minutes`)**: Duration of screen lock break in minutes (default: 5 mins).
+- **Warning Time (`warning_time_seconds`)**: Pre-lock countdown banner duration in seconds (default: 30 secs).
+- **Screensaver Style (`screensaver_style`)**: Visual theme selection (`Default`, `Minimalist`, `Matrix`).
+- **User Password (`password_hash`)**: SHA-256 hashed password used to unblock screen early or edit settings (default: `1234`).
 
 ### Unblocking the Screen
 When the pause screen is active, the computer will remain locked until the pause timer runs out or the correct password (user password or master password `mindfulness`) is entered into the unblock field.
 
-### Changing Settings
-Click the **⚙️ Settings** button in the main window or settings menu, enter the password to authenticate, and adjust:
-- Play duration (in minutes)
-- Pause duration (in minutes)
-- Warning duration (in seconds, default 30s)
-- Screensaver style (`Default`, `Minimalist`, `Matrix`)
-- Custom user password
+---
+
+## 💻 Development & Architecture
+
+### Application Architecture
+- **State Machine (`src/main.rs`)**: Controls transition states (`Play` -> `Warning` -> `Pause`).
+- **Configuration & Security (`src/config.rs`)**: Hashing with SHA-256 and JSON storage at `%APPDATA%\interrupt\settings.json`.
+- **Modular Screensavers (`src/screensaver.rs`)**: Implements `ScreensaverComponent` trait for visual screensavers.
+- **Native Windows API (`src/win32.rs`)**: Low-level keyboard hook (`WH_KEYBOARD_LL`), virtual screen metrics, and active foreground window capture/restoration.
+
+### Fixed Timings & System Constants
+- **Master Password**: `"mindfulness"` (Emergency unlock and admin access constant).
+- **Initial Screen Lock Grace Period**: `3 seconds` (User interaction is ignored during the first 3s of screen lock to prevent mouse jitter from popping up the password box immediately).
+- **Unblock Panel Inactivity Auto-Hide**: `20 seconds` (If no mouse/keyboard interaction occurs for 20s while unlocked panel is visible, it hides automatically).
+- **Default Breathing Animation Timing**: `11 seconds` total cycle (`3.0s Inhale` -> `2.0s Hold` -> `6.0s Exhale`).
+- **Window Level**: Uses `HWND_TOPMOST` and `WS_POPUP` spanning `SM_XVIRTUALSCREEN` / `SM_YVIRTUALSCREEN` bounds during `Pause` state.
 
 ---
 
