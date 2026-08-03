@@ -73,9 +73,13 @@ cargo run
 
 # Build release executable
 cargo build --release
+
+# Create portable distribution ZIP package
+.\package.bat
+# or: powershell -ExecutionPolicy Bypass -File .\package.ps1
 ```
 
-The compiled executable will be available at `target/release/interrupt.exe`.
+The compiled executable will be available at `target/release/interrupt.exe` and the portable ZIP package will be generated at `dist/interrupt-v1.0.0-windows-x64.zip`.
 
 ---
 
