@@ -199,12 +199,12 @@ impl ScreensaverComponent for MatrixScreensaver {
         let time = ui.input(|i| i.time);
         let painter = ui.painter();
 
-        // Matrix Half-Width Katakana + ASCII Character Set
+        // Matrix ASCII Digital Character Set (Guaranteed 100% font glyph compatibility)
         let chars = [
-            'ｦ', 'ｧ', 'ｨ', 'ｩ', 'ｪ', 'ｫ', 'ｬ', 'ｭ', 'ｮ', 'ｯ', 'ｱ', 'ｲ', 'ｳ', 'ｴ', 'ｵ', 'ｶ', 'ｷ',
-            'ｸ', 'ｹ', 'ｺ', 'ｻ', 'ｼ', 'ｽ', 'ｾ', 'ｿ', 'ﾀ', 'ﾁ', 'ﾂ', 'ﾃ', 'ﾄ', 'ﾅ', 'ﾆ', 'ﾇ', 'ﾈ',
-            'ﾉ', 'ﾊ', 'ﾋ', 'ﾌ', 'ﾍ', 'ﾎ', 'ﾏ', 'ﾐ', 'ﾑ', 'ﾒ', 'ﾓ', 'ﾔ', 'ﾕ', 'ﾖ', 'ﾗ', 'ﾘ', 'ﾙ',
-            'ﾚ', 'ﾛ', 'ﾜ', 'ﾝ', '0', '1', '2', '3', '4', '5', '7', '8', '9', 'X', 'Z', 'K', 'M',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G',
+            'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+            'Y', 'Z', '#', '$', '%', '&', '*', '+', '-', '/', '=', '?', '@', '^', '~', '<', '>',
+            '|', ':', ';',
         ];
 
         let col_width = 20.0;

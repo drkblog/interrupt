@@ -24,7 +24,7 @@ src/
 2. **Modular Screensavers (`src/screensaver.rs`)**:
    - Implements `ScreensaverComponent` trait for visual screensaver rendering (`Default`, `Minimalist`, `Matrix`).
    - `DefaultScreensaver` renders a 60 FPS breathing aurora with floating particles and guided breathing indicator (`Inhale 3s` -> `Hold 2s` -> `Exhale 6s`).
-   - `MatrixScreensaver` renders a smooth 60 FPS animated digital rain with glowing green Katakana characters and trailing streams.
+   - `MatrixScreensaver` renders a smooth 60 FPS animated digital rain with glowing green ASCII characters, digits, tech symbols, and trailing streams.
    - Outer shell in `render_pause_screen` handles input focus, password verification, and OS window level, making it trivial to add new screensavers while reusing all unblock mechanics.
 
 3. **Windows API Integration (`src/win32.rs`)**:
