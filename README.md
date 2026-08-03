@@ -83,6 +83,28 @@ The compiled executable will be available at `target/release/interrupt.exe` and 
 
 ---
 
+## 🛡️ Windows SmartScreen Warning Notice
+
+When downloading and executing `interrupt.exe` on Windows for the first time, Windows Defender SmartScreen may display a warning banner stating *"Windows protected your PC - Microsoft Defender SmartScreen prevented an unrecognized app from starting"*.
+
+### Why this happens
+This warning appears for newly built or open-source executables that are not digitally signed with an expensive commercial **EV (Extended Validation) Code Signing Certificate**. It is standard Windows security behavior for unsigned binaries downloaded from GitHub.
+
+### How to run the application
+1. On the SmartScreen blue banner, click **"More info"**.
+2. Click **"Run anyway"**.
+3. *(Alternative)* Right-click `interrupt.exe` -> **Properties** -> Check **Unblock** at the bottom -> Click **Apply / OK**.
+
+### For Developers: Code Signing
+If you wish to digitally sign release binaries:
+- Obtain a Code Signing Certificate (OV or EV) from a Certificate Authority (DigiCert, Sectigo, or free for open source via [SignPath Foundation](https://about.signpath.io/)).
+- Sign the compiled executable using Microsoft `signtool.exe`:
+  ```cmd
+  signtool sign /fd SHA256 /a /tr http://timestamp.digicert.com /td SHA256 dist\interrupt-v1.0.0-windows-x64\interrupt.exe
+  ```
+
+---
+
 ## 📖 Technical & Agent Documentation
 
 Refer to [AGENTS.md](file:///c:/Users/Leandro/repos/interrupt/AGENTS.md) for technical architecture details, Win32 API hooks, state machine implementation, and developer guidelines.
