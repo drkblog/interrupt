@@ -1,9 +1,8 @@
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
-use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
-use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
+use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM, GetLastError};
 use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
-    VK_ESCAPE, VK_F4, VK_LWIN, VK_RWIN, VK_TAB,
+    VK_ESCAPE, VK_F4, VK_LWIN, VK_RWIN, VK_TAB, keybd_event, KEYEVENTF_KEYUP,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, CallNextHookEx, GetForegroundWindow, GetSystemMetrics,
@@ -11,7 +10,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     SetWindowsHookExW, ShowWindow, UnhookWindowsHookEx, GWL_STYLE, HWND_NOTOPMOST, HWND_TOPMOST,
     KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
     SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
-    WM_KEYDOWN, WM_SYSKEYDOWN, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_VISIBLE,
+    WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_VISIBLE,
 };
 
 static HOOK_HANDLE: AtomicIsize = AtomicIsize::new(0);
@@ -118,15 +117,20 @@ pub fn restore_app_window_normal() {
 
 pub fn enable_keyboard_hook() {
     if HOOK_ENABLED.load(Ordering::SeqCst) {
+        log_to_file("[HOOK] Hook already enabled");
         return;
     }
     HOOK_ENABLED.store(true, Ordering::SeqCst);
 
     unsafe {
-        let hmod = GetModuleHandleW(std::ptr::null());
-        let hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(low_level_keyboard_proc), hmod, 0);
+        let tid = GetCurrentThreadId();
+        let hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(low_level_keyboard_proc), std::ptr::null_mut(), 0);
         if !hook.is_null() {
             HOOK_HANDLE.store(hook as isize, Ordering::SeqCst);
+            log_to_file(&format!("[HOOK] Hook successfully enabled on thread {}: {:?}", tid, hook));
+        } else {
+            let err = GetLastError();
+            log_to_file(&format!("[HOOK] SetWindowsHookExW failed on thread {} with error code: {}", tid, err));
         }
     }
 }
@@ -137,6 +141,7 @@ pub fn disable_keyboard_hook() {
     if hook != 0 {
         unsafe {
             UnhookWindowsHookEx(hook as _);
+            log_to_file("[HOOK] Hook disabled");
         }
     }
 }
@@ -149,7 +154,10 @@ unsafe extern "system" fn low_level_keyboard_proc(
     if code >= 0 && HOOK_ENABLED.load(Ordering::SeqCst) {
         let kbd = *(lparam as *const KBDLLHOOKSTRUCT);
         let vk = kbd.vkCode as u16;
-        let is_syskey = wparam == WM_SYSKEYDOWN as usize || wparam == WM_KEYDOWN as usize;
+        let is_key_event = wparam == WM_KEYDOWN as usize
+            || wparam == WM_SYSKEYDOWN as usize
+            || wparam == WM_KEYUP as usize
+            || wparam == WM_SYSKEYUP as usize;
         let is_alt_down = (kbd.flags & LLKHF_ALTDOWN) != 0;
 
         // Block Alt+Tab, Alt+Esc, Ctrl+Esc, Win key, Alt+F4
@@ -161,11 +169,53 @@ unsafe extern "system" fn low_level_keyboard_proc(
             _ => false,
         };
 
-        if block && is_syskey {
+        if block && is_key_event {
+            unsafe {
+                keybd_event(0, 0, 0, 0); // dummy down
+                keybd_event(0, 0, KEYEVENTF_KEYUP, 0); // dummy up
+            }
             return 1; // Block key
         }
     }
 
     let hook = HOOK_HANDLE.load(Ordering::SeqCst);
     CallNextHookEx(hook as _, code, wparam, lparam)
+}
+
+pub static LOGGING_ENABLED: AtomicBool = AtomicBool::new(false);
+
+pub fn init_logging(enabled: bool) {
+    LOGGING_ENABLED.store(enabled, Ordering::SeqCst);
+    if enabled {
+        if let Some(mut path) = dirs::config_dir() {
+            path.push("interrupt");
+            let _ = std::fs::create_dir_all(&path);
+            path.push("debug.log");
+            let _ = std::fs::write(&path, ""); // Overwrite/clear
+            log_to_file("[LOG] Logging initialized and cleared");
+        }
+    }
+}
+
+pub fn log_to_file(msg: &str) {
+    println!("{}", msg);
+    if !LOGGING_ENABLED.load(Ordering::SeqCst) {
+        return;
+    }
+    if let Some(mut path) = dirs::config_dir() {
+        path.push("interrupt");
+        path.push("debug.log");
+        if let Ok(mut file) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+        {
+            use std::io::Write;
+            let time = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis();
+            let _ = writeln!(file, "[{}] {}", time, msg);
+        }
+    }
 }

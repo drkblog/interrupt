@@ -28,6 +28,7 @@ pub struct InterruptApp {
     new_warning_time_seconds: u32,
     new_screensaver_style: ScreensaverStyle,
     new_password_input: String,
+    new_enable_logging: bool,
     settings_message: Option<String>,
     focus_password_field: bool,
     focus_settings_password: bool,
@@ -46,7 +47,9 @@ impl InterruptApp {
         let new_pause_time = settings.pause_time_minutes;
         let new_warning_time_seconds = settings.warning_time_seconds;
         let new_screensaver_style = settings.screensaver_style;
+        let new_enable_logging = settings.enable_logging;
 
+        win32::init_logging(settings.enable_logging);
         cc.egui_ctx.set_visuals(egui::Visuals::dark());
 
         Self {
@@ -63,6 +66,7 @@ impl InterruptApp {
             new_warning_time_seconds,
             new_screensaver_style,
             new_password_input: String::new(),
+            new_enable_logging,
             settings_message: None,
             focus_password_field: false,
             focus_settings_password: false,
@@ -140,7 +144,7 @@ impl InterruptApp {
             AppState::Pause => {
                 let pause_dur = self.pause_duration();
                 if elapsed >= pause_dur {
-                    self.transition_to_play(ctx);
+                    self.transition_to_play(ctx, "timer expired");
                 }
             }
         }
@@ -167,7 +171,8 @@ impl InterruptApp {
         win32::make_app_window_fullscreen_topmost();
     }
 
-    fn transition_to_play(&mut self, ctx: &egui::Context) {
+    fn transition_to_play(&mut self, ctx: &egui::Context, reason: &str) {
+        win32::log_to_file(&format!("[HOOK] transition_to_play called. Reason: {}", reason));
         win32::disable_keyboard_hook();
         self.state = AppState::Play;
         self.state_start = Instant::now();
@@ -184,8 +189,9 @@ impl InterruptApp {
     }
 
     fn try_unblock(&mut self, ctx: &egui::Context) {
+        win32::log_to_file(&format!("[DEBUG] try_unblock: input = {:?}", self.password_input));
         if self.settings.verify_password(&self.password_input) {
-            self.transition_to_play(ctx);
+            self.transition_to_play(ctx, "unlocked via password");
         } else {
             self.password_error = Some("Incorrect password. Please try again.".to_string());
         }
@@ -530,6 +536,10 @@ impl InterruptApp {
                                     .password(true),
                             );
                             ui.end_row();
+
+                            ui.label("Enable Debug Logging:");
+                            ui.checkbox(&mut self.new_enable_logging, "");
+                            ui.end_row();
                         });
 
                     ui.add_space(16.0);
@@ -540,6 +550,8 @@ impl InterruptApp {
                             self.settings.pause_time_minutes = self.new_pause_time;
                             self.settings.warning_time_seconds = self.new_warning_time_seconds;
                             self.settings.screensaver_style = self.new_screensaver_style;
+                            self.settings.enable_logging = self.new_enable_logging;
+                            win32::init_logging(self.new_enable_logging);
                             if !self.new_password_input.trim().is_empty() {
                                 self.settings.set_password(&self.new_password_input);
                                 self.new_password_input.clear();

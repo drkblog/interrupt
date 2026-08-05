@@ -19,6 +19,8 @@ pub struct AppSettings {
     #[serde(default)]
     pub screensaver_style: ScreensaverStyle,
     pub password_hash: String,
+    #[serde(default)]
+    pub enable_logging: bool,
 }
 
 impl Default for AppSettings {
@@ -29,6 +31,7 @@ impl Default for AppSettings {
             warning_time_seconds: 30,
             screensaver_style: ScreensaverStyle::Default,
             password_hash: hash_password("1234"),
+            enable_logging: false,
         }
     }
 }
