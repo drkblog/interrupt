@@ -50,7 +50,37 @@ impl InterruptApp {
         let new_enable_logging = settings.enable_logging;
 
         win32::init_logging(settings.enable_logging);
-        cc.egui_ctx.set_visuals(egui::Visuals::dark());
+        
+        let mut visuals = egui::Visuals::dark();
+        visuals.panel_fill = egui::Color32::from_rgb(15, 23, 42); // slate 900
+        visuals.window_fill = egui::Color32::from_rgb(30, 41, 59); // slate 800
+        visuals.widgets.noninteractive.bg_fill = egui::Color32::from_rgb(15, 23, 42);
+        visuals.widgets.noninteractive.fg_stroke.color = egui::Color32::from_rgb(203, 213, 225); // slate 300
+        
+        visuals.widgets.inactive.bg_fill = egui::Color32::from_rgb(30, 41, 59); // slate 800
+        visuals.widgets.inactive.fg_stroke.color = egui::Color32::from_rgb(241, 245, 249); // slate 100
+        visuals.widgets.inactive.rounding = egui::Rounding::same(8.0);
+        
+        visuals.widgets.hovered.bg_fill = egui::Color32::from_rgb(79, 70, 229); // indigo 600
+        visuals.widgets.hovered.fg_stroke.color = egui::Color32::WHITE;
+        visuals.widgets.hovered.rounding = egui::Rounding::same(8.0);
+        
+        visuals.widgets.active.bg_fill = egui::Color32::from_rgb(67, 56, 202); // indigo 700
+        visuals.widgets.active.fg_stroke.color = egui::Color32::WHITE;
+        visuals.widgets.active.rounding = egui::Rounding::same(8.0);
+        
+        visuals.widgets.open.bg_fill = egui::Color32::from_rgb(51, 65, 85); // slate 700
+        visuals.widgets.open.fg_stroke.color = egui::Color32::WHITE;
+        visuals.widgets.open.rounding = egui::Rounding::same(8.0);
+        
+        visuals.selection.bg_fill = egui::Color32::from_rgb(99, 102, 241); // indigo 500
+        visuals.selection.stroke.color = egui::Color32::WHITE;
+        cc.egui_ctx.set_visuals(visuals);
+
+        let mut style = (*cc.egui_ctx.style()).clone();
+        style.spacing.button_padding = egui::vec2(12.0, 8.0);
+        style.spacing.item_spacing = egui::vec2(8.0, 12.0);
+        cc.egui_ctx.set_style(style);
 
         Self {
             settings,
@@ -183,7 +213,7 @@ impl InterruptApp {
 
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::Normal));
-        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(540.0, 420.0)));
+        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(540.0, 460.0)));
         win32::restore_app_window_normal();
         win32::restore_foreground_window();
     }
@@ -603,110 +633,195 @@ impl eframe::App for InterruptApp {
                 0
             };
 
-            egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-                ui.horizontal(|ui| {
-                    ui.heading("⏱️ Interrupt");
-                    ui.separator();
+            egui::TopBottomPanel::top("top_panel")
+                .frame(egui::Frame::none()
+                    .fill(egui::Color32::from_rgb(30, 41, 59))
+                    .inner_margin(egui::Margin::symmetric(16.0, 12.0))
+                    .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(51, 65, 85)))
+                )
+                .show(ctx, |ui| {
+                    ui.horizontal(|ui| {
+                        ui.heading(
+                            egui::RichText::new("⏱️ Interrupt")
+                                .strong()
+                                .color(egui::Color32::from_rgb(241, 245, 249))
+                        );
+                        
+                        ui.add_space(8.0);
+                        
+                        let status_text = if self.show_settings {
+                            format!(
+                                "Play Mode [PAUSED] • break in {:02}:{:02}",
+                                remaining_sec / 60,
+                                remaining_sec % 60
+                            )
+                        } else {
+                            format!(
+                                "Play Mode • break in {:02}:{:02}",
+                                remaining_sec / 60,
+                                remaining_sec % 60
+                            )
+                        };
 
-                    let status_text = if self.show_settings {
-                        format!(
-                            "Play Mode [PAUSED] | Next break in {:02}:{:02}",
-                            remaining_sec / 60,
-                            remaining_sec % 60
-                        )
-                    } else {
-                        format!(
-                            "Play Mode | Next break in {:02}:{:02}",
-                            remaining_sec / 60,
-                            remaining_sec % 60
-                        )
-                    };
+                        ui.label(
+                            egui::RichText::new(status_text)
+                                .color(egui::Color32::from_rgb(148, 163, 184))
+                                .size(13.0)
+                        );
 
-                    ui.label(status_text);
-
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("⚙️ Settings").clicked() {
-                            self.open_settings();
-                        }
-                        if ui.button("🔒 Lock Now").clicked() {
-                            self.transition_to_pause(ctx);
-                        }
-                        if ui.button("🔄 Reset Timer").clicked() {
-                            self.open_reset_dialog();
-                        }
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            let settings_btn = ui.add(
+                                egui::Button::new(egui::RichText::new("⚙️ Settings").strong())
+                                    .min_size(egui::vec2(90.0, 28.0))
+                            );
+                            if settings_btn.clicked() {
+                                self.open_settings();
+                            }
+                        });
                     });
                 });
-            });
 
             egui::CentralPanel::default().show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
-                    ui.add_space(20.0);
-                    ui.heading("Interrupt Screen Time Manager");
-                    ui.add_space(8.0);
+                    ui.add_space(16.0);
+                    
+                    ui.label(
+                        egui::RichText::new("Interrupt Screen Time Manager")
+                            .size(22.0)
+                            .strong()
+                            .color(egui::Color32::WHITE)
+                    );
+                    
                     let sub_label = if self.show_settings {
                         "Settings open — timer suspended until settings window is closed."
                     } else {
                         "Active cycle running. Time remaining until next screen lock:"
                     };
-                    ui.label(sub_label);
-                    ui.add_space(16.0);
-
-                    // Prominent Live Timer Display
                     ui.label(
-                        egui::RichText::new(format!(
-                            "{:02}:{:02}",
-                            remaining_sec / 60,
-                            remaining_sec % 60
-                        ))
-                        .size(64.0)
-                        .color(if self.show_settings {
-                            egui::Color32::YELLOW
-                        } else if self.state == AppState::Warning {
-                            egui::Color32::LIGHT_RED
-                        } else {
-                            egui::Color32::from_rgb(56, 189, 248)
-                        })
-                        .monospace()
-                        .strong(),
+                        egui::RichText::new(sub_label)
+                            .color(egui::Color32::from_rgb(148, 163, 184))
+                            .size(13.0)
                     );
+                    ui.add_space(12.0);
 
-                    ui.add_space(20.0);
-
+                    // Large Card for Timer & Progress
+                    egui::Frame::none()
+                        .fill(egui::Color32::from_rgb(30, 41, 59))
+                        .rounding(16.0)
+                        .stroke(egui::Stroke::new(1.0, egui::Color32::from_rgb(71, 85, 105)))
+                        .inner_margin(egui::Margin::symmetric(24.0, 20.0))
+                        .show(ui, |ui| {
+                            ui.set_max_width(420.0);
+                            ui.vertical_centered(|ui| {
+                                // Timer
+                                ui.label(
+                                    egui::RichText::new(format!(
+                                        "{:02}:{:02}",
+                                        remaining_sec / 60,
+                                        remaining_sec % 60
+                                    ))
+                                    .size(64.0)
+                                    .color(if self.show_settings {
+                                        egui::Color32::from_rgb(234, 179, 8) // amber-500
+                                    } else if self.state == AppState::Warning {
+                                        egui::Color32::from_rgb(239, 68, 68) // red-500
+                                    } else {
+                                        egui::Color32::from_rgb(56, 189, 248) // sky-400
+                                    })
+                                    .monospace()
+                                    .strong(),
+                                );
+                                
+                                ui.add_space(8.0);
+                                
+                                // Progress bar
+                                let total_play_sec = (self.settings.play_time_minutes * 60) as f32;
+                                let remaining_f32 = remaining_sec as f32;
+                                let progress_fraction = if total_play_sec > 0.0 {
+                                    (remaining_f32 / total_play_sec).clamp(0.0, 1.0)
+                                } else {
+                                    0.0
+                                };
+                                
+                                let progress_color = if self.show_settings {
+                                    egui::Color32::from_rgb(234, 179, 8)
+                                } else if self.state == AppState::Warning {
+                                    egui::Color32::from_rgb(239, 68, 68)
+                                } else {
+                                    egui::Color32::from_rgb(99, 102, 241)
+                                };
+                                
+                                ui.add(
+                                    egui::ProgressBar::new(progress_fraction)
+                                        .show_percentage()
+                                        .fill(progress_color)
+                                );
+                            });
+                        });
+                        
+                    ui.add_space(16.0);
+                    
+                    // Main action buttons
                     ui.horizontal(|ui| {
-                        ui.add_space(100.0);
-                        if ui
-                            .add(
-                                egui::Button::new(
-                                    egui::RichText::new("🔒 Lock Now").size(16.0).strong(),
-                                )
-                                .min_size(egui::vec2(140.0, 36.0)),
+                        ui.add_space(76.0);
+                        
+                        // Primary button
+                        let lock_btn = ui.add(
+                            egui::Button::new(
+                                egui::RichText::new("🔒 Lock Now").size(16.0).strong().color(egui::Color32::WHITE)
                             )
-                            .clicked()
-                        {
+                            .fill(egui::Color32::from_rgb(79, 70, 229)) // indigo 600
+                            .min_size(egui::vec2(160.0, 40.0))
+                        );
+                        if lock_btn.clicked() {
                             self.transition_to_pause(ctx);
                         }
-                        ui.add_space(12.0);
-                        if ui
-                            .add(
-                                egui::Button::new(
-                                    egui::RichText::new("🔄 Reset Timer")
-                                        .size(16.0)
-                                        .strong(),
-                                )
-                                .min_size(egui::vec2(140.0, 36.0)),
+                        
+                        ui.add_space(16.0);
+                        
+                        // Secondary button
+                        let reset_btn = ui.add(
+                            egui::Button::new(
+                                egui::RichText::new("🔄 Reset Timer").size(16.0).strong().color(egui::Color32::WHITE)
                             )
-                            .clicked()
-                        {
+                            .fill(egui::Color32::from_rgb(51, 65, 85)) // slate 700
+                            .min_size(egui::vec2(160.0, 40.0))
+                        );
+                        if reset_btn.clicked() {
                             self.open_reset_dialog();
                         }
                     });
-
+                    
                     ui.add_space(20.0);
-                    ui.label(format!("• Play Time: {} mins", self.settings.play_time_minutes));
-                    ui.label(format!("• Pause Time: {} mins", self.settings.pause_time_minutes));
-                    ui.label(format!("• Warning Time: {} secs", self.settings.warning_time_seconds));
-                    ui.label(format!("• Screensaver: {}", self.settings.screensaver_style.name()));
-                    ui.label("• Master Password: enabled ('mindfulness')");
+                    
+                    // Info pills / badges
+                    ui.horizontal_wrapped(|ui| {
+                        ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
+                        
+                        let info_items = vec![
+                            (format!("Play: {}m", self.settings.play_time_minutes), egui::Color32::from_rgb(56, 189, 248)),
+                            (format!("Pause: {}m", self.settings.pause_time_minutes), egui::Color32::from_rgb(168, 85, 247)),
+                            (format!("Warn: {}s", self.settings.warning_time_seconds), egui::Color32::from_rgb(244, 63, 94)),
+                            (format!("Style: {}", self.settings.screensaver_style.name().split(' ').next().unwrap_or("")), egui::Color32::from_rgb(52, 211, 153)),
+                            ("Master PW: On".to_string(), egui::Color32::from_rgb(148, 163, 184)),
+                        ];
+                        
+                        ui.add_space(24.0); // Center adjustment
+                        for (text, color) in info_items {
+                            egui::Frame::none()
+                                .fill(egui::Color32::from_rgb(30, 41, 59))
+                                .rounding(6.0)
+                                .stroke(egui::Stroke::new(1.0, color))
+                                .inner_margin(egui::Margin::symmetric(10.0, 4.0))
+                                .show(ui, |ui| {
+                                    ui.label(
+                                        egui::RichText::new(text)
+                                            .size(12.0)
+                                            .color(egui::Color32::WHITE)
+                                    );
+                                });
+                        }
+                    });
                 });
             });
         }
@@ -731,7 +846,7 @@ fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Interrupt - Healthy Screen Breaks")
-            .with_inner_size([540.0, 420.0])
+            .with_inner_size([540.0, 460.0])
             .with_min_inner_size([400.0, 350.0]),
         ..Default::default()
     };
