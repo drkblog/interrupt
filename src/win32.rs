@@ -1,10 +1,11 @@
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
-use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT, WPARAM, GetLastError};
+use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT, WPARAM, GetLastError, POINT};
 use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     VK_ESCAPE, VK_F4, VK_LWIN, VK_RWIN, VK_TAB, keybd_event, KEYEVENTF_KEYUP,
 };
 use windows_sys::Win32::System::Diagnostics::Debug::MessageBeep;
+use windows_sys::Win32::Graphics::Gdi::{CreateBitmap, DeleteObject, HGDIOBJ};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, CallNextHookEx, EnumThreadWindows, GetForegroundWindow, GetSystemMetrics,
     GetWindowTextW, GetWindowThreadProcessId, IsWindow, SetForegroundWindow, SetWindowLongW, SetWindowPos,
@@ -12,6 +13,12 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MB_ICONINFORMATION, MB_ICONWARNING, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
     SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, SW_HIDE, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
     WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_VISIBLE,
+    CreatePopupMenu, AppendMenuW, TrackPopupMenu, DestroyMenu, GetCursorPos, SetWindowLongPtrW,
+    GWLP_WNDPROC, WM_USER, WM_LBUTTONUP, WM_LBUTTONDBLCLK, WM_RBUTTONUP, MF_STRING, MF_SEPARATOR,
+    TPM_RETURNCMD, TPM_NONOTIFY, WNDPROC, CreateIconIndirect, ICONINFO, WM_CLOSE, WM_SYSCOMMAND, SC_MINIMIZE, DestroyIcon, PostMessageW
+};
+use windows_sys::Win32::UI::Shell::{
+    NOTIFYICONDATAW, Shell_NotifyIconW, NIM_ADD, NIM_DELETE, NIF_ICON, NIF_MESSAGE, NIF_TIP
 };
 
 static HOOK_HANDLE: AtomicIsize = AtomicIsize::new(0);
@@ -80,9 +87,15 @@ pub fn restore_foreground_window() {
 }
 
 unsafe extern "system" fn enum_thread_window_callback(hwnd: HWND, lparam: LPARAM) -> BOOL {
-    let hwnd_ptr = lparam as *mut HWND;
-    *hwnd_ptr = hwnd;
-    0 // Stop enumeration
+    let title = get_window_title(hwnd);
+    log_to_file(&format!("[DEBUG] enum_thread_window_callback: hwnd = {:?}, title = '{}'", hwnd, title));
+    if title.contains("Interrupt") {
+        let hwnd_ptr = lparam as *mut HWND;
+        *hwnd_ptr = hwnd;
+        0 // Stop enumeration
+    } else {
+        1 // Continue enumeration
+    }
 }
 
 pub fn get_app_window_handle() -> HWND {
@@ -279,6 +292,227 @@ pub fn show_app_window(visible: bool) {
         let hwnd = get_app_window_handle();
         if !hwnd.is_null() {
             ShowWindow(hwnd, if visible { SW_SHOW } else { SW_HIDE });
+        }
+    }
+}
+
+fn encode_wide(s: &str) -> Vec<u16> {
+    s.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+pub static ORIGINAL_WNDPROC: AtomicIsize = AtomicIsize::new(0);
+pub static PENDING_TRAY_COMMAND: AtomicIsize = AtomicIsize::new(0);
+pub static SHOULD_EXIT: AtomicBool = AtomicBool::new(false);
+static TRAY_HICON: AtomicIsize = AtomicIsize::new(0);
+
+pub fn poll_pending_tray_command() -> isize {
+    PENDING_TRAY_COMMAND.swap(0, Ordering::SeqCst)
+}
+
+pub unsafe extern "system" fn app_wnd_proc(
+    hwnd: HWND,
+    msg: u32,
+    wparam: WPARAM,
+    lparam: LPARAM,
+) -> LRESULT {
+    let original = ORIGINAL_WNDPROC.load(Ordering::SeqCst);
+    if msg == WM_USER + 1 {
+        let event = lparam as u32;
+        log_to_file(&format!("[DEBUG] app_wnd_proc: received WM_USER+1 message, event = {}", event));
+        if event == WM_LBUTTONUP || event == WM_LBUTTONDBLCLK {
+            log_to_file("[DEBUG] app_wnd_proc: Left click or Double click detected -> Showing window");
+            ShowWindow(hwnd, SW_SHOW);
+            ShowWindow(hwnd, SW_RESTORE);
+            BringWindowToTop(hwnd);
+            SetForegroundWindow(hwnd);
+            return 0;
+        } else if event == WM_RBUTTONUP {
+            log_to_file("[DEBUG] app_wnd_proc: Right click detected -> Showing context menu");
+            show_tray_context_menu(hwnd);
+            return 0;
+        }
+    }
+    
+    if msg == WM_CLOSE {
+        if SHOULD_EXIT.load(Ordering::SeqCst) {
+            log_to_file("[DEBUG] app_wnd_proc: WM_CLOSE allowed because SHOULD_EXIT is true");
+        } else {
+            log_to_file("[DEBUG] app_wnd_proc: WM_CLOSE intercepted -> Hiding window instead of closing");
+            ShowWindow(hwnd, SW_HIDE);
+            return 0;
+        }
+    }
+    
+    if msg == WM_SYSCOMMAND {
+        let cmd = wparam as u32 & 0xFFF0;
+        if cmd == SC_MINIMIZE {
+            log_to_file("[DEBUG] app_wnd_proc: SC_MINIMIZE intercepted -> Hiding window instead of minimizing to taskbar");
+            ShowWindow(hwnd, SW_HIDE);
+            return 0;
+        }
+    }
+    
+    if original != 0 {
+        let prev_proc: WNDPROC = std::mem::transmute(original);
+        if let Some(proc) = prev_proc {
+            proc(hwnd, msg, wparam, lparam)
+        } else {
+            0
+        }
+    } else {
+        0
+    }
+}
+
+unsafe fn show_tray_context_menu(hwnd: HWND) {
+    let hmenu = CreatePopupMenu();
+    let open_str = encode_wide("Open Interrupt");
+    let lock_str = encode_wide("Lock Screen Now");
+    let exit_str = encode_wide("Exit");
+
+    AppendMenuW(hmenu, MF_STRING, 1001, open_str.as_ptr());
+    AppendMenuW(hmenu, MF_SEPARATOR, 0, std::ptr::null());
+    AppendMenuW(hmenu, MF_STRING, 1002, lock_str.as_ptr());
+    AppendMenuW(hmenu, MF_SEPARATOR, 0, std::ptr::null());
+    AppendMenuW(hmenu, MF_STRING, 1003, exit_str.as_ptr());
+
+    let mut pt = POINT { x: 0, y: 0 };
+    GetCursorPos(&mut pt);
+    SetForegroundWindow(hwnd);
+    let cmd = TrackPopupMenu(
+        hmenu,
+        TPM_RETURNCMD | TPM_NONOTIFY,
+        pt.x,
+        pt.y,
+        0,
+        hwnd,
+        std::ptr::null(),
+    );
+    DestroyMenu(hmenu);
+    log_to_file(&format!("[DEBUG] show_tray_context_menu: TrackPopupMenu returned cmd = {}", cmd));
+ 
+    if cmd == 1001 {
+        log_to_file("[DEBUG] show_tray_context_menu: Open requested -> Showing window");
+        ShowWindow(hwnd, SW_SHOW);
+        ShowWindow(hwnd, SW_RESTORE);
+        BringWindowToTop(hwnd);
+        SetForegroundWindow(hwnd);
+    } else if cmd == 1002 {
+        log_to_file("[DEBUG] show_tray_context_menu: Lock requested -> Showing window and setting lock command");
+        ShowWindow(hwnd, SW_SHOW);
+        ShowWindow(hwnd, SW_RESTORE);
+        BringWindowToTop(hwnd);
+        SetForegroundWindow(hwnd);
+        PENDING_TRAY_COMMAND.store(cmd as isize, Ordering::SeqCst);
+    } else if cmd == 1003 {
+        log_to_file("[DEBUG] show_tray_context_menu: Exit requested -> Sending WM_CLOSE");
+        SHOULD_EXIT.store(true, Ordering::SeqCst);
+        PostMessageW(hwnd, WM_CLOSE, 0, 0);
+    }
+}
+
+unsafe fn create_hicon_from_rgba(rgba: &[u8], width: i32, height: i32) -> windows_sys::Win32::UI::WindowsAndMessaging::HICON {
+    let mut bgra = vec![0u8; rgba.len()];
+    for i in (0..rgba.len()).step_by(4) {
+        bgra[i] = rgba[i + 2];     // B
+        bgra[i + 1] = rgba[i + 1]; // G
+        bgra[i + 2] = rgba[i];     // R
+        bgra[i + 3] = rgba[i + 3]; // A
+    }
+
+    let hbm_color = CreateBitmap(width, height, 1, 32, bgra.as_ptr() as *const _);
+    let mask_bits = vec![0u8; (width * height / 8) as usize];
+    let hbm_mask = CreateBitmap(width, height, 1, 1, mask_bits.as_ptr() as *const _);
+
+    let icon_info = ICONINFO {
+        fIcon: 1,
+        xHotspot: 0,
+        yHotspot: 0,
+        hbmMask: hbm_mask,
+        hbmColor: hbm_color,
+    };
+
+    let hicon = CreateIconIndirect(&icon_info);
+
+    DeleteObject(hbm_color as HGDIOBJ);
+    DeleteObject(hbm_mask as HGDIOBJ);
+
+    hicon
+}
+
+pub fn register_tray_icon() {
+    unsafe {
+        let hwnd = get_app_window_handle();
+        if hwnd.is_null() {
+            log_to_file("[ERROR] register_tray_icon: app hwnd is null!");
+            return;
+        }
+
+        // Subclass window if not already done
+        if ORIGINAL_WNDPROC.load(Ordering::SeqCst) == 0 {
+            let subclassed = SetWindowLongPtrW(hwnd, GWLP_WNDPROC, app_wnd_proc as *const () as isize);
+            ORIGINAL_WNDPROC.store(subclassed, Ordering::SeqCst);
+            log_to_file(&format!("[LOG] Window subclassed. Original WndProc: {}", subclassed));
+        }
+
+        let mut nid: NOTIFYICONDATAW = std::mem::zeroed();
+        nid.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
+        nid.hWnd = hwnd;
+        nid.uID = 1;
+        nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+        nid.uCallbackMessage = WM_USER + 1;
+
+        // Generate custom RGBA icon pixels
+        let mut icon_rgba = vec![0u8; 16 * 16 * 4];
+        for y in 0..16 {
+            for x in 0..16 {
+                let idx = (y * 16 + x) * 4;
+                let dx = x as f32 - 7.5;
+                let dy = y as f32 - 7.5;
+                let dist = (dx * dx + dy * dy).sqrt();
+                if dist <= 6.0 {
+                    icon_rgba[idx] = 99;      // R
+                    icon_rgba[idx + 1] = 102;  // G
+                    icon_rgba[idx + 2] = 241;  // B
+                    icon_rgba[idx + 3] = 255;  // A
+                }
+                if dist <= 2.0 {
+                    icon_rgba[idx] = 244;      // R
+                    icon_rgba[idx + 1] = 63;   // G
+                    icon_rgba[idx + 2] = 94;   // B
+                    icon_rgba[idx + 3] = 255;  // A
+                }
+            }
+        }
+        let hicon = create_hicon_from_rgba(&icon_rgba, 16, 16);
+        TRAY_HICON.store(hicon as isize, Ordering::SeqCst);
+        nid.hIcon = hicon;
+
+        let tip = encode_wide("Interrupt - Screen Break Manager");
+        let len = tip.len().min(nid.szTip.len() - 1);
+        nid.szTip[..len].copy_from_slice(&tip[..len]);
+
+        Shell_NotifyIconW(NIM_ADD, &nid);
+        log_to_file("[LOG] Native tray icon registered with custom color icon");
+    }
+}
+
+pub fn unregister_tray_icon() {
+    unsafe {
+        let hwnd = get_app_window_handle();
+        if hwnd.is_null() {
+            return;
+        }
+        let mut nid: NOTIFYICONDATAW = std::mem::zeroed();
+        nid.cbSize = std::mem::size_of::<NOTIFYICONDATAW>() as u32;
+        nid.hWnd = hwnd;
+        nid.uID = 1;
+        Shell_NotifyIconW(NIM_DELETE, &nid);
+        log_to_file("[LOG] Native tray icon unregistered");
+
+        let hicon = TRAY_HICON.swap(0, Ordering::SeqCst);
+        if hicon != 0 {
+            DestroyIcon(hicon as windows_sys::Win32::UI::WindowsAndMessaging::HICON);
         }
     }
 }

@@ -20,9 +20,9 @@ windows-sys = { version = "0.59", features = [
     "Win32_Graphics_Gdi",
     "Win32_System_Threading",
     "Win32_System_LibraryLoader",
-    "Win32_System_Diagnostics_Debug"
+    "Win32_System_Diagnostics_Debug",
+    "Win32_UI_Shell"
 ] }
-tray-icon = "0.19"
 
 [profile.release]
 opt-level = 3
