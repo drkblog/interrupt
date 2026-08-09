@@ -1,11 +1,12 @@
 # Known Issues - Interrupt
 
-This document tracks active and resolved issues for **Interrupt**.
+This document tracks active issues for **Interrupt**.
 
 | Issue ID | Description | Status |
 |---|---|---|
 | **ISSUE-01** | Headless Graphics Context Panic (OpenGL initialization fails in headless environments) | Active (Environment Restriction) |
-| **ISSUE-02** | Window Visibility Restoration on Unblocking (Winit asynchronously forces visibility when restoring styles) | Resolved |
+| **ISSUE-02** | Window Visibility Restoration on Unblocking (Winit asynchronously forces visibility when restoring styles) | Active |
+| **ISSUE-03** | Application process doesn't exit even after the window is closed | Active |
 
 ---
 
@@ -20,11 +21,10 @@ This document tracks active and resolved issues for **Interrupt**.
   ```
 - **Workaround/Remedy**: This is an environmental restriction. The application must be launched from an interactive user session with standard desktop shell and GPU capabilities.
 
----
-
-## Resolved Issues
-
 ### ISSUE-02: Window Visibility Restoration on Unblocking
-- **Description**: If the main window is hidden (minimized to tray) before locking, unblocking (entering password) would still restore the window to full visibility instead of keeping it hidden in the tray.
-- **Root Cause**: `eframe`/`winit` asynchronously queues viewport commands (like `Fullscreen(false)` and `InnerSize`). These commands run after native subclass window hiding routines, causing winit to force the window visible again at the end of the frame lifecycle.
-- **Resolution**: Intercepted the visibility state and explicitly queued `egui::ViewportCommand::Visible(false)` when transitioning to play state, aligning both native Win32 window flags and the winit viewport loop.
+- **Description**: If the main window is hidden (minimized to tray) before locking, unblocking (entering password) still restores the window to full visibility instead of keeping it hidden in the tray.
+- **Notes**: Attempted to solve it by tracking `WAS_VISIBLE_BEFORE_LOCK` and sending `egui::ViewportCommand::Visible(false)` on unblocking, but the window is still visible. Additional diagnostic logging has been added to trace the window state during unblocking.
+
+### ISSUE-03: Application Process Doesn't Exit After Window Close
+- **Description**: When closing the application window, the window disappears, but the background process does not terminate cleanly and remains active in memory.
+- **Notes**: This could be caused by active low-level keyboard hook threads, background event handlers, or message loop subclassing blocks keeping the application thread active. Diagnostic logging has been added to trace window subclass destruction, keyboard hook cleanup, and loop exit sequences.

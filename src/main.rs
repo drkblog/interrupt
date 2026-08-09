@@ -226,11 +226,13 @@ impl InterruptApp {
         self.show_pause_unblock_panel = false;
         self.last_pause_interaction = None;
 
+        win32::log_to_file("[DEBUG] transition_to_play: sending Fullscreen(false), Normal level, size 540x460");
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::Normal));
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(540.0, 460.0)));
         
         let was_visible = win32::WAS_VISIBLE_BEFORE_LOCK.load(std::sync::atomic::Ordering::SeqCst);
+        win32::log_to_file(&format!("[DEBUG] transition_to_play: was_visible = {}, sending Visible = {}", was_visible, was_visible));
         if !was_visible {
             ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
         }
@@ -900,6 +902,7 @@ impl eframe::App for InterruptApp {
  
 impl Drop for InterruptApp {
     fn drop(&mut self) {
+        win32::log_to_file("[LOG] InterruptApp::drop() called - cleaning up tray icon");
         win32::unregister_tray_icon();
     }
 }

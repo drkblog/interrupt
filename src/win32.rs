@@ -225,13 +225,16 @@ pub fn enable_keyboard_hook() {
 }
 
 pub fn disable_keyboard_hook() {
+    log_to_file("[HOOK] disable_keyboard_hook() called");
     HOOK_ENABLED.store(false, Ordering::SeqCst);
     let hook = HOOK_HANDLE.swap(0, Ordering::SeqCst);
     if hook != 0 {
         unsafe {
-            UnhookWindowsHookEx(hook as _);
-            log_to_file("[HOOK] Hook disabled");
+            let res = UnhookWindowsHookEx(hook as _);
+            log_to_file(&format!("[HOOK] Hook disabled. UnhookWindowsHookEx result = {}", res));
         }
+    } else {
+        log_to_file("[HOOK] disable_keyboard_hook: Hook handle was 0");
     }
 }
 
@@ -383,6 +386,13 @@ pub unsafe extern "system" fn app_wnd_proc(
             ShowWindow(hwnd, SW_HIDE);
             return 0;
         }
+    }
+    
+    if msg == 2 {
+        log_to_file("[DEBUG] app_wnd_proc: received WM_DESTROY message");
+    }
+    if msg == 130 {
+        log_to_file("[DEBUG] app_wnd_proc: received WM_NCDESTROY message");
     }
     
     if original != 0 {
