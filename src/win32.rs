@@ -198,7 +198,6 @@ pub fn init_logging(enabled: bool) {
 }
 
 pub fn log_to_file(msg: &str) {
-    println!("{}", msg);
     if !LOGGING_ENABLED.load(Ordering::SeqCst) {
         return;
     }

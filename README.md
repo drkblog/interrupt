@@ -79,7 +79,7 @@ cargo build --release
 # or: powershell -ExecutionPolicy Bypass -File .\package.ps1
 ```
 
-The compiled executable will be available at `target/release/interrupt.exe` and the portable ZIP package will be generated at `dist/interrupt-v1.0.0-windows-x64.zip`.
+The compiled executable will be available at `target/release/interrupt.exe` and the portable ZIP package will be generated at `dist/interrupt-v1.1.0-windows-x64.zip`.
 
 ---
 
@@ -100,7 +100,7 @@ If you wish to digitally sign release binaries:
 - Obtain a Code Signing Certificate (OV or EV) from a Certificate Authority (DigiCert, Sectigo, or free for open source via [SignPath Foundation](https://about.signpath.io/)).
 - Sign the compiled executable using Microsoft `signtool.exe`:
   ```cmd
-  signtool sign /fd SHA256 /a /tr http://timestamp.digicert.com /td SHA256 dist\interrupt-v1.0.0-windows-x64\interrupt.exe
+  signtool sign /fd SHA256 /a /tr http://timestamp.digicert.com /td SHA256 dist\interrupt-v1.1.0-windows-x64\interrupt.exe
   ```
 
 ---

@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 mod config;
 mod screensaver;
 mod win32;
@@ -57,7 +59,7 @@ impl InterruptApp {
         visuals.widgets.noninteractive.bg_fill = egui::Color32::from_rgb(15, 23, 42);
         visuals.widgets.noninteractive.fg_stroke.color = egui::Color32::from_rgb(203, 213, 225); // slate 300
         
-        visuals.widgets.inactive.bg_fill = egui::Color32::from_rgb(30, 41, 59); // slate 800
+        visuals.widgets.inactive.bg_fill = egui::Color32::from_rgb(15, 23, 42); // slate 900
         visuals.widgets.inactive.fg_stroke.color = egui::Color32::from_rgb(241, 245, 249); // slate 100
         visuals.widgets.inactive.rounding = egui::Rounding::same(8.0);
         
@@ -126,6 +128,11 @@ impl InterruptApp {
         self.focus_settings_password = true;
         self.settings_password_input.clear();
         self.settings_message = None;
+        self.new_play_time = self.settings.play_time_minutes;
+        self.new_pause_time = self.settings.pause_time_minutes;
+        self.new_warning_time_seconds = self.settings.warning_time_seconds;
+        self.new_screensaver_style = self.settings.screensaver_style;
+        self.new_enable_logging = self.settings.enable_logging;
     }
 
     fn close_settings(&mut self) {
@@ -418,6 +425,7 @@ impl InterruptApp {
             .open(&mut open)
             .resizable(false)
             .collapsible(false)
+            .fixed_size(egui::vec2(320.0, 180.0))
             .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
             .show(ctx, |ui| {
                 ui.label("Enter password to reset the play timer:");
@@ -470,10 +478,11 @@ impl InterruptApp {
         }
 
         let mut open = self.show_settings;
-        egui::Window::new("⚙️ Interrupt Settings")
+        egui::Window::new("⚙ Interrupt Settings")
             .open(&mut open)
             .resizable(false)
             .collapsible(false)
+            .fixed_size(egui::vec2(420.0, 360.0))
             .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
             .show(ctx, |ui| {
                 if !self.settings_unlocked {
@@ -521,7 +530,7 @@ impl InterruptApp {
                     ui.heading("Configure Break Cycles");
                     ui.add_space(4.0);
                     ui.label(
-                        egui::RichText::new("⏸️ Timer suspended while settings window is open")
+                        egui::RichText::new("⏸ Timer suspended while settings window is open")
                             .color(egui::Color32::YELLOW)
                             .size(13.0),
                     );
@@ -529,26 +538,27 @@ impl InterruptApp {
 
                     egui::Grid::new("settings_grid")
                         .num_columns(2)
-                        .spacing([12.0, 8.0])
+                        .spacing([16.0, 10.0])
                         .show(ui, |ui| {
                             ui.label("Play Time (minutes):");
-                            ui.add(egui::DragValue::new(&mut self.new_play_time).range(1..=300));
+                            ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_play_time).range(1..=300));
                             ui.end_row();
 
                             ui.label("Pause Time (minutes):");
-                            ui.add(egui::DragValue::new(&mut self.new_pause_time).range(1..=60));
+                            ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_pause_time).range(1..=60));
                             ui.end_row();
 
                             ui.label("Warning Time (seconds):");
-                            ui.add(
-                                egui::DragValue::new(&mut self.new_warning_time_seconds)
-                                    .range(5..=300),
+                            ui.add_sized(
+                                [180.0, 22.0],
+                                egui::DragValue::new(&mut self.new_warning_time_seconds).range(5..=300),
                             );
                             ui.end_row();
 
                             ui.label("Screensaver Style:");
                             egui::ComboBox::from_id_source("screensaver_style_selector")
                                 .selected_text(self.new_screensaver_style.name())
+                                .width(180.0)
                                 .show_ui(ui, |ui| {
                                     for style in ScreensaverStyle::all() {
                                         ui.selectable_value(
@@ -561,7 +571,8 @@ impl InterruptApp {
                             ui.end_row();
 
                             ui.label("New Password (optional):");
-                            ui.add(
+                            ui.add_sized(
+                                [180.0, 22.0],
                                 egui::TextEdit::singleline(&mut self.new_password_input)
                                     .password(true),
                             );
@@ -593,11 +604,6 @@ impl InterruptApp {
                                     Some("Settings saved successfully!".to_string());
                                 self.close_settings();
                             }
-                        }
-
-                        if ui.button("🔒 Lock Screen Now").clicked() {
-                            self.close_settings();
-                            self.transition_to_pause(ctx);
                         }
                     });
 
@@ -847,7 +853,7 @@ fn main() -> eframe::Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_title("Interrupt - Healthy Screen Breaks")
             .with_inner_size([540.0, 460.0])
-            .with_min_inner_size([400.0, 350.0]),
+            .with_resizable(false),
         ..Default::default()
     };
 
