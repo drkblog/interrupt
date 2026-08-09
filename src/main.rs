@@ -230,12 +230,6 @@ impl InterruptApp {
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::Normal));
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(540.0, 460.0)));
-        
-        let was_visible = win32::WAS_VISIBLE_BEFORE_LOCK.load(std::sync::atomic::Ordering::SeqCst);
-        win32::log_to_file(&format!("[DEBUG] transition_to_play: was_visible = {}, sending Visible = {}", was_visible, was_visible));
-        if !was_visible {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
-        }
 
         win32::restore_app_window_normal();
         win32::restore_foreground_window();
@@ -908,6 +902,7 @@ impl Drop for InterruptApp {
 }
 
 fn main() -> eframe::Result<()> {
+    win32::log_to_file("[LOG] main: Starting eframe application");
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Interrupt - Healthy Screen Breaks")
@@ -916,9 +911,11 @@ fn main() -> eframe::Result<()> {
         ..Default::default()
     };
 
-    eframe::run_native(
+    let res = eframe::run_native(
         "Interrupt",
         options,
         Box::new(|cc| Ok(Box::new(InterruptApp::new(cc)))),
-    )
+    );
+    win32::log_to_file(&format!("[LOG] main: eframe::run_native returned: {:?}", res));
+    res
 }

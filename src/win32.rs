@@ -9,13 +9,14 @@ use windows_sys::Win32::Graphics::Gdi::{CreateBitmap, DeleteObject, HGDIOBJ};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, CallNextHookEx, EnumThreadWindows, GetForegroundWindow, GetSystemMetrics,
     GetWindowTextW, GetWindowThreadProcessId, IsWindow, SetForegroundWindow, SetWindowLongW, SetWindowPos,
-    SetWindowsHookExW, ShowWindow, UnhookWindowsHookEx, GWL_STYLE, HWND_NOTOPMOST, HWND_TOPMOST,
+    SetWindowsHookExW, ShowWindow, UnhookWindowsHookEx, GWL_STYLE, HWND_TOPMOST,
     KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MB_ICONINFORMATION, MB_ICONWARNING, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
-    SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, SW_HIDE, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
+    SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
     WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_VISIBLE,
     CreatePopupMenu, AppendMenuW, TrackPopupMenu, DestroyMenu, GetCursorPos, SetWindowLongPtrW,
     GWLP_WNDPROC, WM_USER, WM_LBUTTONUP, WM_LBUTTONDBLCLK, WM_RBUTTONUP, MF_STRING, MF_SEPARATOR,
-    TPM_RETURNCMD, TPM_NONOTIFY, WNDPROC, CreateIconIndirect, ICONINFO, WM_CLOSE, WM_SYSCOMMAND, SC_MINIMIZE, DestroyIcon, PostMessageW, IsWindowVisible
+    TPM_RETURNCMD, TPM_NONOTIFY, WNDPROC, CreateIconIndirect, ICONINFO, WM_CLOSE, WM_SYSCOMMAND, SC_MINIMIZE, DestroyIcon, IsWindowVisible,
+    GetWindowLongW, GWL_EXSTYLE, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW, SWP_NOSIZE, SWP_NOZORDER
 };
 use windows_sys::Win32::UI::Shell::{
     NOTIFYICONDATAW, Shell_NotifyIconW, NIM_ADD, NIM_DELETE, NIF_ICON, NIF_MESSAGE, NIF_TIP
@@ -176,26 +177,7 @@ pub fn restore_app_window_normal() {
             let was_visible = WAS_VISIBLE_BEFORE_LOCK.load(Ordering::SeqCst);
             log_to_file(&format!("[DEBUG] restore_app_window_normal: was_visible = {}", was_visible));
             
-            let flags = if was_visible {
-                SWP_SHOWWINDOW | SWP_FRAMECHANGED
-            } else {
-                SWP_FRAMECHANGED
-            };
-
-            let pos_res = SetWindowPos(
-                hwnd,
-                HWND_NOTOPMOST,
-                100,
-                100,
-                540,
-                460,
-                flags,
-            );
-            log_to_file(&format!("[DEBUG] restore_app_window_normal: SetWindowPos result = {}", pos_res));
-
-            if !was_visible {
-                ShowWindow(hwnd, SW_HIDE);
-            }
+            show_app_window(was_visible);
             
             VISIBILITY_RECORDED.store(false, Ordering::SeqCst);
         } else {
@@ -327,7 +309,39 @@ pub fn show_app_window(visible: bool) {
     unsafe {
         let hwnd = get_app_window_handle();
         if !hwnd.is_null() {
-            ShowWindow(hwnd, if visible { SW_SHOW } else { SW_HIDE });
+            log_to_file(&format!("[DEBUG] show_app_window: visible = {}", visible));
+            if visible {
+                let mut style = GetWindowLongW(hwnd, GWL_EXSTYLE) as u32;
+                style &= !WS_EX_TOOLWINDOW;
+                style |= WS_EX_APPWINDOW;
+                SetWindowLongW(hwnd, GWL_EXSTYLE, style as i32);
+                
+                SetWindowPos(
+                    hwnd,
+                    std::ptr::null_mut(),
+                    100,
+                    100,
+                    540,
+                    460,
+                    SWP_SHOWWINDOW | SWP_FRAMECHANGED | SWP_NOZORDER,
+                );
+                ShowWindow(hwnd, SW_RESTORE);
+            } else {
+                let mut style = GetWindowLongW(hwnd, GWL_EXSTYLE) as u32;
+                style &= !WS_EX_APPWINDOW;
+                style |= WS_EX_TOOLWINDOW;
+                SetWindowLongW(hwnd, GWL_EXSTYLE, style as i32);
+                
+                SetWindowPos(
+                    hwnd,
+                    std::ptr::null_mut(),
+                    -32000,
+                    -32000,
+                    0,
+                    0,
+                    SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
+                );
+            }
         }
     }
 }
@@ -357,10 +371,7 @@ pub unsafe extern "system" fn app_wnd_proc(
         log_to_file(&format!("[DEBUG] app_wnd_proc: received WM_USER+1 message, event = {}", event));
         if event == WM_LBUTTONUP || event == WM_LBUTTONDBLCLK {
             log_to_file("[DEBUG] app_wnd_proc: Left click or Double click detected -> Showing window");
-            ShowWindow(hwnd, SW_SHOW);
-            ShowWindow(hwnd, SW_RESTORE);
-            BringWindowToTop(hwnd);
-            SetForegroundWindow(hwnd);
+            show_app_window(true);
             return 0;
         } else if event == WM_RBUTTONUP {
             log_to_file("[DEBUG] app_wnd_proc: Right click detected -> Showing context menu");
@@ -374,7 +385,7 @@ pub unsafe extern "system" fn app_wnd_proc(
             log_to_file("[DEBUG] app_wnd_proc: WM_CLOSE allowed because SHOULD_EXIT is true");
         } else {
             log_to_file("[DEBUG] app_wnd_proc: WM_CLOSE intercepted -> Hiding window instead of closing");
-            ShowWindow(hwnd, SW_HIDE);
+            show_app_window(false);
             return 0;
         }
     }
@@ -383,7 +394,7 @@ pub unsafe extern "system" fn app_wnd_proc(
         let cmd = wparam as u32 & 0xFFF0;
         if cmd == SC_MINIMIZE {
             log_to_file("[DEBUG] app_wnd_proc: SC_MINIMIZE intercepted -> Hiding window instead of minimizing to taskbar");
-            ShowWindow(hwnd, SW_HIDE);
+            show_app_window(false);
             return 0;
         }
     }
@@ -436,22 +447,17 @@ unsafe fn show_tray_context_menu(hwnd: HWND) {
  
     if cmd == 1001 {
         log_to_file("[DEBUG] show_tray_context_menu: Open requested -> Showing window");
-        ShowWindow(hwnd, SW_SHOW);
-        ShowWindow(hwnd, SW_RESTORE);
-        BringWindowToTop(hwnd);
-        SetForegroundWindow(hwnd);
+        show_app_window(true);
     } else if cmd == 1002 {
         log_to_file("[DEBUG] show_tray_context_menu: Lock requested -> Showing window and setting lock command");
         record_visibility_before_lock();
-        ShowWindow(hwnd, SW_SHOW);
-        ShowWindow(hwnd, SW_RESTORE);
-        BringWindowToTop(hwnd);
-        SetForegroundWindow(hwnd);
+        show_app_window(true);
         PENDING_TRAY_COMMAND.store(cmd as isize, Ordering::SeqCst);
     } else if cmd == 1003 {
-        log_to_file("[DEBUG] show_tray_context_menu: Exit requested -> Sending WM_CLOSE");
-        SHOULD_EXIT.store(true, Ordering::SeqCst);
-        PostMessageW(hwnd, WM_CLOSE, 0, 0);
+        log_to_file("[DEBUG] show_tray_context_menu: Exit requested -> Disabling hook, unregistering tray and exiting process");
+        disable_keyboard_hook();
+        unregister_tray_icon();
+        std::process::exit(0);
     }
 }
 

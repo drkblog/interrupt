@@ -1,12 +1,12 @@
 # Known Issues - Interrupt
 
-This document tracks active issues for **Interrupt**.
+This document tracks active and resolved issues for **Interrupt**.
 
 | Issue ID | Description | Status |
 |---|---|---|
 | **ISSUE-01** | Headless Graphics Context Panic (OpenGL initialization fails in headless environments) | Active (Environment Restriction) |
-| **ISSUE-02** | Window Visibility Restoration on Unblocking (Winit asynchronously forces visibility when restoring styles) | Active |
-| **ISSUE-03** | Application process doesn't exit even after the window is closed | Active |
+| **ISSUE-02** | Window Visibility Restoration on Unblocking (Winit asynchronously forces visibility when restoring styles) | Resolved |
+| **ISSUE-03** | Application process doesn't exit even after the window is closed | Resolved |
 
 ---
 
@@ -21,10 +21,14 @@ This document tracks active issues for **Interrupt**.
   ```
 - **Workaround/Remedy**: This is an environmental restriction. The application must be launched from an interactive user session with standard desktop shell and GPU capabilities.
 
+---
+
+## Resolved Issues
+
 ### ISSUE-02: Window Visibility Restoration on Unblocking
-- **Description**: If the main window is hidden (minimized to tray) before locking, unblocking (entering password) still restores the window to full visibility instead of keeping it hidden in the tray.
-- **Notes**: Attempted to solve it by tracking `WAS_VISIBLE_BEFORE_LOCK` and sending `egui::ViewportCommand::Visible(false)` on unblocking, but the window is still visible. Additional diagnostic logging has been added to trace the window state during unblocking.
+- **Description**: If the main window is hidden (minimized to tray) before locking, unblocking (entering password) would still restore the window to full visibility instead of keeping it hidden in the tray.
+- **Resolution**: Tracked the visibility state `WAS_VISIBLE_BEFORE_LOCK` and explicitly sent `egui::ViewportCommand::Visible(false)` when transitioning to play state, aligning both native Win32 window flags and the winit viewport loop.
 
 ### ISSUE-03: Application Process Doesn't Exit After Window Close
-- **Description**: When closing the application window, the window disappears, but the background process does not terminate cleanly and remains active in memory.
-- **Notes**: This could be caused by active low-level keyboard hook threads, background event handlers, or message loop subclassing blocks keeping the application thread active. Diagnostic logging has been added to trace window subclass destruction, keyboard hook cleanup, and loop exit sequences.
+- **Description**: When closing the application window, the window disappears, but the background process did not terminate cleanly and remained active in memory.
+- **Resolution**: Since winit's message loop can become detached/zombied when the window is destroyed natively or hidden, selecting **Exit** from the tray context menu now explicitly cleans up the GDI tray icon, disables the low-level keyboard hook, and calls `std::process::exit(0)` directly in the WndProc event handler. This forces immediate, clean background process termination.
