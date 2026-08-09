@@ -182,6 +182,107 @@ impl InterruptApp {
         self.math_user_input.clear();
     }
 
+    fn draw_circular_timer(
+        &self,
+        ui: &mut egui::Ui,
+        elapsed_sec: f32,
+        total_pause_sec: f32,
+        min_pause_sec: f32,
+    ) {
+        let size = 120.0;
+        let (rect, _response) = ui.allocate_exact_size(egui::vec2(size, size), egui::Sense::hover());
+        let center = rect.center();
+        let painter = ui.painter();
+
+        let outer_radius = size / 2.0 - 6.0;
+        let inner_radius = outer_radius - 12.0;
+
+        // Draw background rings
+        painter.circle_stroke(
+            center,
+            outer_radius,
+            egui::Stroke::new(3.0, egui::Color32::from_rgba_unmultiplied(255, 255, 255, 15)),
+        );
+        if min_pause_sec > 0.0 {
+            painter.circle_stroke(
+                center,
+                inner_radius,
+                egui::Stroke::new(3.0, egui::Color32::from_rgba_unmultiplied(168, 85, 247, 15)),
+            );
+        }
+
+        let outer_fraction = (1.0 - (elapsed_sec / total_pause_sec)).clamp(0.0, 1.0);
+        let inner_fraction = if min_pause_sec > 0.0 {
+            (1.0 - (elapsed_sec / min_pause_sec)).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+
+        let start_angle = -std::f32::consts::FRAC_PI_2;
+
+        // Draw outer ring (light blue countdown sweep)
+        if outer_fraction > 0.0 {
+            let outer_end_angle = start_angle + outer_fraction * 2.0 * std::f32::consts::PI;
+            let mut points = vec![];
+            let steps = 40;
+            for i in 0..=steps {
+                let t = i as f32 / steps as f32;
+                let angle = start_angle + t * (outer_end_angle - start_angle);
+                points.push(center + egui::vec2(angle.cos() * outer_radius, angle.sin() * outer_radius));
+            }
+            for w in points.windows(2) {
+                painter.line_segment([w[0], w[1]], egui::Stroke::new(4.0, egui::Color32::from_rgb(56, 189, 248)));
+            }
+        }
+
+        // Draw inner ring (purple countdown sweep)
+        if min_pause_sec > 0.0 && inner_fraction > 0.0 {
+            let inner_end_angle = start_angle + inner_fraction * 2.0 * std::f32::consts::PI;
+            let mut points = vec![];
+            let steps = 40;
+            for i in 0..=steps {
+                let t = i as f32 / steps as f32;
+                let angle = start_angle + t * (inner_end_angle - start_angle);
+                points.push(center + egui::vec2(angle.cos() * inner_radius, angle.sin() * inner_radius));
+            }
+            for w in points.windows(2) {
+                painter.line_segment([w[0], w[1]], egui::Stroke::new(4.0, egui::Color32::from_rgb(168, 85, 247)));
+            }
+        }
+
+        let total_remaining = (total_pause_sec - elapsed_sec).max(0.0) as u32;
+        let min_remaining = (min_pause_sec - elapsed_sec).max(0.0) as u32;
+
+        let total_min = total_remaining / 60;
+        let total_sec = total_remaining % 60;
+        let min_min = min_remaining / 60;
+        let min_sec = min_remaining % 60;
+
+        painter.text(
+            center - egui::vec2(0.0, 8.0),
+            egui::Align2::CENTER_CENTER,
+            format!("{:02}:{:02}", total_min, total_sec),
+            egui::FontId::proportional(22.0),
+            egui::Color32::WHITE,
+        );
+
+        let subtext = if min_remaining > 0 {
+            format!("Min: {:02}:{:02}", min_min, min_sec)
+        } else if min_pause_sec > 0.0 {
+            "Min met!".to_string()
+        } else {
+            "Break".to_string()
+        };
+
+        painter.text(
+            center + egui::vec2(0.0, 14.0),
+            egui::Align2::CENTER_CENTER,
+            subtext,
+            egui::FontId::proportional(11.0),
+            if min_remaining > 0 { egui::Color32::from_rgb(168, 85, 247) } else { egui::Color32::from_rgb(52, 211, 153) },
+        );
+    }
+
     fn open_settings(&mut self) {
         self.show_settings = true;
         self.focus_settings_password = true;
@@ -459,13 +560,15 @@ impl InterruptApp {
                                     let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.math_min_pause_percent) / 100;
                                     let elapsed_sec = self.state_start.elapsed().as_secs();
 
-                                    if self.math_solved_count >= total_needed {
-                                        let wait_sec = if min_dur_sec as u64 > elapsed_sec {
-                                            min_dur_sec as u64 - elapsed_sec
-                                        } else {
-                                            0
-                                        };
+                                    self.draw_circular_timer(
+                                        ui,
+                                        elapsed_sec as f32,
+                                        (self.settings.pause_time_minutes * 60) as f32,
+                                        min_dur_sec as f32,
+                                    );
+                                    ui.add_space(20.0);
 
+                                    if self.math_solved_count >= total_needed {
                                         ui.label(
                                             egui::RichText::new("🎉 All questions solved!")
                                                 .size(20.0)
@@ -474,12 +577,9 @@ impl InterruptApp {
                                         );
                                         ui.add_space(8.0);
                                         ui.label(
-                                            egui::RichText::new(format!(
-                                                "Break must continue for another {}s to meet the minimum off-game break duration.",
-                                                wait_sec
-                                            ))
-                                            .size(14.0)
-                                            .color(egui::Color32::YELLOW),
+                                            egui::RichText::new("Break must continue to meet the minimum required off-game duration.")
+                                                .size(14.0)
+                                                .color(egui::Color32::YELLOW),
                                         );
                                     } else {
                                         ui.label(
