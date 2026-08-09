@@ -15,7 +15,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_VISIBLE,
     CreatePopupMenu, AppendMenuW, TrackPopupMenu, DestroyMenu, GetCursorPos, SetWindowLongPtrW,
     GWLP_WNDPROC, WM_USER, WM_LBUTTONUP, WM_LBUTTONDBLCLK, WM_RBUTTONUP, MF_STRING, MF_SEPARATOR,
-    TPM_RETURNCMD, TPM_NONOTIFY, WNDPROC, CreateIconIndirect, ICONINFO, WM_CLOSE, WM_SYSCOMMAND, SC_MINIMIZE, DestroyIcon, PostMessageW
+    TPM_RETURNCMD, TPM_NONOTIFY, WNDPROC, CreateIconIndirect, ICONINFO, WM_CLOSE, WM_SYSCOMMAND, SC_MINIMIZE, DestroyIcon, PostMessageW, IsWindowVisible
 };
 use windows_sys::Win32::UI::Shell::{
     NOTIFYICONDATAW, Shell_NotifyIconW, NIM_ADD, NIM_DELETE, NIF_ICON, NIF_MESSAGE, NIF_TIP
@@ -24,6 +24,23 @@ use windows_sys::Win32::UI::Shell::{
 static HOOK_HANDLE: AtomicIsize = AtomicIsize::new(0);
 static HOOK_ENABLED: AtomicBool = AtomicBool::new(false);
 static SAVED_FOREGROUND_HWND: AtomicIsize = AtomicIsize::new(0);
+
+pub static WAS_VISIBLE_BEFORE_LOCK: AtomicBool = AtomicBool::new(true);
+pub static VISIBILITY_RECORDED: AtomicBool = AtomicBool::new(false);
+
+pub fn record_visibility_before_lock() {
+    if VISIBILITY_RECORDED.swap(true, Ordering::SeqCst) {
+        return; // Already recorded by tray menu!
+    }
+    unsafe {
+        let hwnd = get_app_window_handle();
+        if !hwnd.is_null() {
+            let visible = IsWindowVisible(hwnd) != 0;
+            WAS_VISIBLE_BEFORE_LOCK.store(visible, Ordering::SeqCst);
+            log_to_file(&format!("[DEBUG] record_visibility_before_lock: {}", visible));
+        }
+    }
+}
 
 pub struct VirtualScreenRect {
     pub x: i32,
@@ -155,6 +172,16 @@ pub fn restore_app_window_normal() {
         if !hwnd.is_null() {
             let style_res = SetWindowLongW(hwnd, GWL_STYLE, WS_OVERLAPPEDWINDOW as i32);
             log_to_file(&format!("[DEBUG] restore_app_window_normal: SetWindowLongW old style = {}", style_res));
+            
+            let was_visible = WAS_VISIBLE_BEFORE_LOCK.load(Ordering::SeqCst);
+            log_to_file(&format!("[DEBUG] restore_app_window_normal: was_visible = {}", was_visible));
+            
+            let flags = if was_visible {
+                SWP_SHOWWINDOW | SWP_FRAMECHANGED
+            } else {
+                SWP_FRAMECHANGED
+            };
+
             let pos_res = SetWindowPos(
                 hwnd,
                 HWND_NOTOPMOST,
@@ -162,9 +189,15 @@ pub fn restore_app_window_normal() {
                 100,
                 540,
                 460,
-                SWP_SHOWWINDOW | SWP_FRAMECHANGED,
+                flags,
             );
             log_to_file(&format!("[DEBUG] restore_app_window_normal: SetWindowPos result = {}", pos_res));
+
+            if !was_visible {
+                ShowWindow(hwnd, SW_HIDE);
+            }
+            
+            VISIBILITY_RECORDED.store(false, Ordering::SeqCst);
         } else {
             log_to_file("[DEBUG] restore_app_window_normal: app hwnd is null!");
         }
@@ -399,6 +432,7 @@ unsafe fn show_tray_context_menu(hwnd: HWND) {
         SetForegroundWindow(hwnd);
     } else if cmd == 1002 {
         log_to_file("[DEBUG] show_tray_context_menu: Lock requested -> Showing window and setting lock command");
+        record_visibility_before_lock();
         ShowWindow(hwnd, SW_SHOW);
         ShowWindow(hwnd, SW_RESTORE);
         BringWindowToTop(hwnd);

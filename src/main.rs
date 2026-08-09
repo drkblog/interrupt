@@ -195,6 +195,7 @@ impl InterruptApp {
     }
 
     fn transition_to_pause(&mut self, ctx: &egui::Context) {
+        win32::record_visibility_before_lock();
         win32::capture_foreground_window();
         win32::enable_keyboard_hook();
         self.state = AppState::Pause;
@@ -228,6 +229,12 @@ impl InterruptApp {
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::Normal));
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(540.0, 460.0)));
+        
+        let was_visible = win32::WAS_VISIBLE_BEFORE_LOCK.load(std::sync::atomic::Ordering::SeqCst);
+        if !was_visible {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Visible(false));
+        }
+
         win32::restore_app_window_normal();
         win32::restore_foreground_window();
         win32::play_sound_info();
