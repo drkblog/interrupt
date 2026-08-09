@@ -1,12 +1,12 @@
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
-use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM, GetLastError};
+use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT, WPARAM, GetLastError};
 use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     VK_ESCAPE, VK_F4, VK_LWIN, VK_RWIN, VK_TAB, keybd_event, KEYEVENTF_KEYUP,
 };
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    BringWindowToTop, CallNextHookEx, GetForegroundWindow, GetSystemMetrics,
-    GetWindowThreadProcessId, IsWindow, SetForegroundWindow, SetWindowLongW, SetWindowPos,
+    BringWindowToTop, CallNextHookEx, EnumThreadWindows, GetForegroundWindow, GetSystemMetrics,
+    GetWindowTextW, GetWindowThreadProcessId, IsWindow, SetForegroundWindow, SetWindowLongW, SetWindowPos,
     SetWindowsHookExW, ShowWindow, UnhookWindowsHookEx, GWL_STYLE, HWND_NOTOPMOST, HWND_TOPMOST,
     KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
     SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
@@ -78,13 +78,45 @@ pub fn restore_foreground_window() {
     }
 }
 
+unsafe extern "system" fn enum_thread_window_callback(hwnd: HWND, lparam: LPARAM) -> BOOL {
+    let hwnd_ptr = lparam as *mut HWND;
+    *hwnd_ptr = hwnd;
+    0 // Stop enumeration
+}
+
+pub fn get_app_window_handle() -> HWND {
+    let mut hwnd: HWND = std::ptr::null_mut();
+    unsafe {
+        EnumThreadWindows(
+            GetCurrentThreadId(),
+            Some(enum_thread_window_callback),
+            &mut hwnd as *mut HWND as LPARAM,
+        );
+    }
+    hwnd
+}
+
+unsafe fn get_window_title(hwnd: HWND) -> String {
+    let mut buf = [0u16; 256];
+    let len = GetWindowTextW(hwnd, buf.as_mut_ptr(), buf.len() as i32);
+    if len > 0 {
+        String::from_utf16_lossy(&buf[..len as usize])
+    } else {
+        "Unknown Title".to_string()
+    }
+}
+
 pub fn make_app_window_fullscreen_topmost() {
     unsafe {
-        let hwnd = GetForegroundWindow();
+        let hwnd = get_app_window_handle();
+        let title = if !hwnd.is_null() { get_window_title(hwnd) } else { "".to_string() };
+        log_to_file(&format!("[DEBUG] make_app_window_fullscreen_topmost: app hwnd = {:?} (title: '{}')", hwnd, title));
+        
         if !hwnd.is_null() {
             let rect = get_virtual_screen_rect();
-            SetWindowLongW(hwnd, GWL_STYLE, (WS_POPUP | WS_VISIBLE) as i32);
-            SetWindowPos(
+            let style_res = SetWindowLongW(hwnd, GWL_STYLE, (WS_POPUP | WS_VISIBLE) as i32);
+            log_to_file(&format!("[DEBUG] make_app_window_fullscreen_topmost: SetWindowLongW old style = {}", style_res));
+            let pos_res = SetWindowPos(
                 hwnd,
                 HWND_TOPMOST,
                 rect.x,
@@ -93,24 +125,34 @@ pub fn make_app_window_fullscreen_topmost() {
                 rect.height,
                 SWP_SHOWWINDOW | SWP_FRAMECHANGED,
             );
+            log_to_file(&format!("[DEBUG] make_app_window_fullscreen_topmost: SetWindowPos result = {}", pos_res));
+        } else {
+            log_to_file("[DEBUG] make_app_window_fullscreen_topmost: app hwnd is null!");
         }
     }
 }
 
 pub fn restore_app_window_normal() {
     unsafe {
-        let hwnd = GetForegroundWindow();
+        let hwnd = get_app_window_handle();
+        let title = if !hwnd.is_null() { get_window_title(hwnd) } else { "".to_string() };
+        log_to_file(&format!("[DEBUG] restore_app_window_normal: app hwnd = {:?} (title: '{}')", hwnd, title));
+        
         if !hwnd.is_null() {
-            SetWindowLongW(hwnd, GWL_STYLE, WS_OVERLAPPEDWINDOW as i32);
-            SetWindowPos(
+            let style_res = SetWindowLongW(hwnd, GWL_STYLE, WS_OVERLAPPEDWINDOW as i32);
+            log_to_file(&format!("[DEBUG] restore_app_window_normal: SetWindowLongW old style = {}", style_res));
+            let pos_res = SetWindowPos(
                 hwnd,
                 HWND_NOTOPMOST,
                 100,
                 100,
                 540,
-                360,
+                460,
                 SWP_SHOWWINDOW | SWP_FRAMECHANGED,
             );
+            log_to_file(&format!("[DEBUG] restore_app_window_normal: SetWindowPos result = {}", pos_res));
+        } else {
+            log_to_file("[DEBUG] restore_app_window_normal: app hwnd is null!");
         }
     }
 }
