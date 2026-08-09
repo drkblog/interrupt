@@ -6,6 +6,7 @@ pub enum ScreensaverStyle {
     Default,
     Minimalist,
     Matrix,
+    Math,
 }
 
 impl Default for ScreensaverStyle {
@@ -20,6 +21,7 @@ impl ScreensaverStyle {
             ScreensaverStyle::Default,
             ScreensaverStyle::Minimalist,
             ScreensaverStyle::Matrix,
+            ScreensaverStyle::Math,
         ]
     }
 
@@ -28,6 +30,7 @@ impl ScreensaverStyle {
             ScreensaverStyle::Default => "Default (Ambient Aurora)",
             ScreensaverStyle::Minimalist => "Minimalist (Monochrome Dark)",
             ScreensaverStyle::Matrix => "Matrix (Digital Green Rain)",
+            ScreensaverStyle::Math => "Math Exercises (Elementary Arithmetic)",
         }
     }
 }
@@ -320,6 +323,44 @@ impl ScreensaverComponent for MatrixScreensaver {
     }
 }
 
+pub struct MathScreensaver;
+
+impl ScreensaverComponent for MathScreensaver {
+    fn render_visuals(&mut self, ui: &mut egui::Ui, _remaining_sec: u64) {
+        let screen_rect = ui.ctx().screen_rect();
+        let time = ui.input(|i| i.time);
+        let painter = ui.painter();
+
+        let symbols = ["+", "-", "×", "÷", "=", "?", "√", "%"];
+        for i in 0..15 {
+            let seed = (i * 37 + 13) as f64;
+            let speed = 15.0 + (seed % 20.0) as f32;
+            let size = 18.0 + (seed % 16.0) as f32;
+            let x = screen_rect.min.x + (((seed * 83.0) as f32 + time as f32 * speed) % screen_rect.width());
+            let y_base = screen_rect.min.y + ((seed * 29.0) as f32 % screen_rect.height());
+            let y_sway = (time * 0.4 + seed).cos() as f32 * 30.0;
+            let y = y_base + y_sway;
+
+            let alpha = ((time * 0.8 + seed).sin() * 0.15 + 0.25) as f32;
+            let color = egui::Color32::from_rgba_unmultiplied(
+                224,
+                242,
+                254,
+                (255.0 * alpha) as u8,
+            );
+
+            let symbol = symbols[i % symbols.len()];
+            painter.text(
+                egui::pos2(x, y),
+                egui::Align2::CENTER_CENTER,
+                symbol,
+                egui::FontId::proportional(size),
+                color,
+            );
+        }
+    }
+}
+
 /// Renders the visual content of the selected screensaver style.
 pub fn render_screensaver_style(
     style: ScreensaverStyle,
@@ -330,6 +371,7 @@ pub fn render_screensaver_style(
         ScreensaverStyle::Default => DefaultScreensaver.render_visuals(ui, remaining_sec),
         ScreensaverStyle::Minimalist => MinimalistScreensaver.render_visuals(ui, remaining_sec),
         ScreensaverStyle::Matrix => MatrixScreensaver.render_visuals(ui, remaining_sec),
+        ScreensaverStyle::Math => MathScreensaver.render_visuals(ui, remaining_sec),
     }
 }
 
@@ -338,5 +380,6 @@ pub fn get_background_color(style: ScreensaverStyle) -> egui::Color32 {
         ScreensaverStyle::Default => egui::Color32::from_rgb(15, 23, 42),
         ScreensaverStyle::Minimalist => egui::Color32::from_rgb(8, 8, 8),
         ScreensaverStyle::Matrix => egui::Color32::from_rgb(2, 8, 2),
+        ScreensaverStyle::Math => egui::Color32::from_rgb(17, 24, 39), // Slate 900
     }
 }

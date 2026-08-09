@@ -10,6 +10,14 @@ fn default_warning_time_seconds() -> u32 {
     30
 }
 
+fn default_math_questions_needed() -> u32 {
+    3
+}
+
+fn default_math_min_pause_percent() -> u32 {
+    0
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub play_time_minutes: u32,
@@ -21,6 +29,10 @@ pub struct AppSettings {
     pub password_hash: String,
     #[serde(default)]
     pub enable_logging: bool,
+    #[serde(default = "default_math_questions_needed")]
+    pub math_questions_needed: u32,
+    #[serde(default = "default_math_min_pause_percent")]
+    pub math_min_pause_percent: u32,
 }
 
 impl Default for AppSettings {
@@ -32,6 +44,8 @@ impl Default for AppSettings {
             screensaver_style: ScreensaverStyle::Default,
             password_hash: hash_password("1234"),
             enable_logging: false,
+            math_questions_needed: 3,
+            math_min_pause_percent: 0,
         }
     }
 }

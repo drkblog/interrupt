@@ -44,6 +44,19 @@ pub struct InterruptApp {
     // Tray icon integration
     tray_registered: bool,
     should_exit: bool,
+
+    // Math exercises screensaver state
+    math_problem_text: String,
+    math_problem_answer: i32,
+    math_user_input: String,
+    math_solved_count: u32,
+    math_feedback: Option<String>,
+    math_feedback_color: egui::Color32,
+
+    // Settings tab selection and cached variables
+    active_settings_tab: usize,
+    new_math_questions_needed: u32,
+    new_math_min_pause_percent: u32,
 }
 
 impl InterruptApp {
@@ -54,6 +67,8 @@ impl InterruptApp {
         let new_warning_time_seconds = settings.warning_time_seconds;
         let new_screensaver_style = settings.screensaver_style;
         let new_enable_logging = settings.enable_logging;
+        let new_math_questions_needed = settings.math_questions_needed;
+        let new_math_min_pause_percent = settings.math_min_pause_percent;
 
         win32::init_logging(settings.enable_logging);
         
@@ -114,6 +129,15 @@ impl InterruptApp {
             last_pause_interaction: None,
             tray_registered: false,
             should_exit: false,
+            math_problem_text: String::new(),
+            math_problem_answer: 0,
+            math_user_input: String::new(),
+            math_solved_count: 0,
+            math_feedback: None,
+            math_feedback_color: egui::Color32::LIGHT_GRAY,
+            active_settings_tab: 0,
+            new_math_questions_needed,
+            new_math_min_pause_percent,
         }
     }
 
@@ -129,6 +153,35 @@ impl InterruptApp {
         Duration::from_secs(self.settings.warning_time_seconds as u64)
     }
 
+    fn generate_math_problem(&mut self) {
+        let ticks = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        
+        let op = (ticks % 3) as u32;
+        let (problem, answer) = match op {
+            0 => {
+                let a = ((ticks % 89) + 10) as i32; // 10..98
+                let b = (((ticks >> 4) % 89) + 10) as i32;
+                (format!("{} + {}", a, b), a + b)
+            }
+            1 => {
+                let a = ((ticks % 89) + 10) as i32;
+                let b = (((ticks >> 4) % (a as u128 - 9)) + 9) as i32;
+                (format!("{} - {}", a, b), a - b)
+            }
+            _ => {
+                let a = ((ticks % 11) + 2) as i32; // 2..12
+                let b = (((ticks >> 4) % 11) + 2) as i32; // 2..12
+                (format!("{} × {}", a, b), a * b)
+            }
+        };
+        self.math_problem_text = problem;
+        self.math_problem_answer = answer;
+        self.math_user_input.clear();
+    }
+
     fn open_settings(&mut self) {
         self.show_settings = true;
         self.focus_settings_password = true;
@@ -139,6 +192,9 @@ impl InterruptApp {
         self.new_warning_time_seconds = self.settings.warning_time_seconds;
         self.new_screensaver_style = self.settings.screensaver_style;
         self.new_enable_logging = self.settings.enable_logging;
+        self.new_math_questions_needed = self.settings.math_questions_needed;
+        self.new_math_min_pause_percent = self.settings.math_min_pause_percent;
+        self.active_settings_tab = 0;
     }
 
     fn close_settings(&mut self) {
@@ -189,6 +245,13 @@ impl InterruptApp {
                 let pause_dur = self.pause_duration();
                 if elapsed >= pause_dur {
                     self.transition_to_play(ctx, "timer expired");
+                } else if self.settings.screensaver_style == ScreensaverStyle::Math
+                    && self.math_solved_count >= self.settings.math_questions_needed
+                {
+                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.math_min_pause_percent) / 100;
+                    if elapsed.as_secs() >= min_dur_sec as u64 {
+                        self.transition_to_play(ctx, "math exercises complete & min duration met");
+                    }
                 }
             }
         }
@@ -205,6 +268,10 @@ impl InterruptApp {
         self.show_pause_unblock_panel = false;
         self.focus_password_field = false;
         self.last_pause_interaction = None;
+
+        self.math_solved_count = 0;
+        self.math_feedback = None;
+        self.generate_math_problem();
 
         let rect = win32::get_virtual_screen_rect();
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
@@ -320,7 +387,7 @@ impl InterruptApp {
 
             if is_interacting {
                 self.last_pause_interaction = Some(Instant::now());
-                if !self.show_pause_unblock_panel {
+                if self.settings.screensaver_style != ScreensaverStyle::Math && !self.show_pause_unblock_panel {
                     self.show_pause_unblock_panel = true;
                     self.focus_password_field = true;
                 }
@@ -358,6 +425,146 @@ impl InterruptApp {
                         remaining_sec,
                     );
 
+                    if self.settings.screensaver_style == ScreensaverStyle::Math {
+                        ui.add_space(20.0);
+                        egui::Frame::none()
+                            .fill(egui::Color32::from_rgba_unmultiplied(15, 23, 42, 220))
+                            .rounding(16.0)
+                            .stroke(egui::Stroke::new(1.5, egui::Color32::from_rgba_unmultiplied(168, 85, 247, 100)))
+                            .inner_margin(egui::Margin::same(24.0))
+                            .show(ui, |ui| {
+                                ui.set_max_width(400.0);
+                                ui.vertical_centered(|ui| {
+                                    ui.label(
+                                        egui::RichText::new("🧠 Mind Exercises")
+                                            .size(24.0)
+                                            .strong()
+                                            .color(egui::Color32::from_rgb(168, 85, 247)),
+                                    );
+                                    ui.add_space(4.0);
+                                    
+                                    let total_needed = self.settings.math_questions_needed;
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Solve {} math problems to unlock early ({}/{} solved)",
+                                            total_needed,
+                                            self.math_solved_count,
+                                            total_needed
+                                        ))
+                                        .size(14.0)
+                                        .color(egui::Color32::LIGHT_GRAY),
+                                    );
+                                    ui.add_space(16.0);
+
+                                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.math_min_pause_percent) / 100;
+                                    let elapsed_sec = self.state_start.elapsed().as_secs();
+
+                                    if self.math_solved_count >= total_needed {
+                                        let wait_sec = if min_dur_sec as u64 > elapsed_sec {
+                                            min_dur_sec as u64 - elapsed_sec
+                                        } else {
+                                            0
+                                        };
+
+                                        ui.label(
+                                            egui::RichText::new("🎉 All questions solved!")
+                                                .size(20.0)
+                                                .strong()
+                                                .color(egui::Color32::from_rgb(52, 211, 153)),
+                                        );
+                                        ui.add_space(8.0);
+                                        ui.label(
+                                            egui::RichText::new(format!(
+                                                "Break must continue for another {}s to meet the minimum off-game break duration.",
+                                                wait_sec
+                                            ))
+                                            .size(14.0)
+                                            .color(egui::Color32::YELLOW),
+                                        );
+                                    } else {
+                                        ui.label(
+                                            egui::RichText::new(&self.math_problem_text)
+                                                .size(40.0)
+                                                .strong()
+                                                .color(egui::Color32::WHITE),
+                                        );
+                                        ui.add_space(16.0);
+
+                                        let mut submit_answer = false;
+                                        ui.horizontal(|ui| {
+                                            ui.add_space(80.0);
+                                            let res = ui.add(
+                                                egui::TextEdit::singleline(&mut self.math_user_input)
+                                                    .hint_text("Answer...")
+                                                    .font(egui::FontId::proportional(20.0))
+                                                    .desired_width(120.0),
+                                            );
+                                            
+                                            if self.math_solved_count < total_needed && self.state == AppState::Pause && !self.show_pause_unblock_panel {
+                                                res.request_focus();
+                                            }
+
+                                            if ui.button(egui::RichText::new("Submit").size(16.0)).clicked() {
+                                                submit_answer = true;
+                                            }
+                                        });
+
+                                        if ui.input(|i| i.key_pressed(egui::Key::Enter)) && !self.math_user_input.is_empty() {
+                                            if !self.show_pause_unblock_panel || !self.focus_password_field {
+                                                submit_answer = true;
+                                            }
+                                        }
+
+                                        if submit_answer {
+                                            if let Ok(val) = self.math_user_input.trim().parse::<i32>() {
+                                                if val == self.math_problem_answer {
+                                                    self.math_solved_count += 1;
+                                                    self.math_user_input.clear();
+                                                    if self.math_solved_count >= total_needed {
+                                                        if elapsed_sec >= min_dur_sec as u64 {
+                                                            self.transition_to_play(ctx, "solved math exercises");
+                                                        } else {
+                                                            self.math_feedback = Some("All questions solved! Waiting for break duration...".to_string());
+                                                            self.math_feedback_color = egui::Color32::from_rgb(52, 211, 153);
+                                                        }
+                                                    } else {
+                                                        self.math_feedback = Some("Correct! Next problem...".to_string());
+                                                        self.math_feedback_color = egui::Color32::from_rgb(52, 211, 153);
+                                                        self.generate_math_problem();
+                                                    }
+                                                } else {
+                                                    self.math_feedback = Some("Incorrect answer, try again!".to_string());
+                                                    self.math_feedback_color = egui::Color32::from_rgb(248, 113, 113);
+                                                    self.math_user_input.clear();
+                                                }
+                                            } else {
+                                                self.math_feedback = Some("Please enter a valid number.".to_string());
+                                                self.math_feedback_color = egui::Color32::from_rgb(248, 113, 113);
+                                                self.math_user_input.clear();
+                                            }
+                                        }
+
+                                        if let Some(ref feedback) = self.math_feedback {
+                                            ui.add_space(10.0);
+                                            ui.label(
+                                                egui::RichText::new(feedback)
+                                                    .size(14.0)
+                                                    .color(self.math_feedback_color),
+                                            );
+                                        }
+                                    }
+
+                                    if !self.show_pause_unblock_panel {
+                                        ui.add_space(12.0);
+                                        if ui.link("🔑 Use Administrator Password").clicked() {
+                                            self.show_pause_unblock_panel = true;
+                                            self.focus_password_field = true;
+                                        }
+                                    }
+                                });
+                            });
+                    }
+
                     ui.add_space(30.0);
 
                     // Password unblock panel (Only visible when user interacts)
@@ -392,7 +599,7 @@ impl InterruptApp {
                                     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
                                 }
 
-                                if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                                if ui.input(|i| i.key_pressed(egui::Key::Enter)) && response.has_focus() {
                                     self.try_unblock(ctx);
                                 }
 
@@ -538,7 +745,7 @@ impl InterruptApp {
                         ui.label(egui::RichText::new(msg).color(egui::Color32::LIGHT_RED));
                     }
                 } else {
-                    ui.heading("Configure Break Cycles");
+                    ui.heading("Configure Settings");
                     ui.add_space(4.0);
                     ui.label(
                         egui::RichText::new("⏸ Timer suspended while settings window is open")
@@ -547,54 +754,87 @@ impl InterruptApp {
                     );
                     ui.add_space(8.0);
 
-                    egui::Grid::new("settings_grid")
-                        .num_columns(2)
-                        .spacing([16.0, 10.0])
-                        .show(ui, |ui| {
-                            ui.label("Play Time (minutes):");
-                            ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_play_time).range(1..=300));
-                            ui.end_row();
+                    // Tab Selector
+                    ui.horizontal(|ui| {
+                        ui.selectable_value(&mut self.active_settings_tab, 0, "📅 Break Cycles");
+                        ui.selectable_value(&mut self.active_settings_tab, 1, "🔒 Lock Screen Settings");
+                    });
+                    ui.add_space(10.0);
 
-                            ui.label("Pause Time (minutes):");
-                            ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_pause_time).range(1..=60));
-                            ui.end_row();
+                    if self.active_settings_tab == 0 {
+                        egui::Grid::new("settings_grid")
+                            .num_columns(2)
+                            .spacing([16.0, 10.0])
+                            .show(ui, |ui| {
+                                ui.label("Play Time (minutes):");
+                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_play_time).range(1..=300));
+                                ui.end_row();
 
-                            ui.label("Warning Time (seconds):");
-                            ui.add_sized(
-                                [180.0, 22.0],
-                                egui::DragValue::new(&mut self.new_warning_time_seconds).range(5..=300),
-                            );
-                            ui.end_row();
+                                ui.label("Pause Time (minutes):");
+                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_pause_time).range(1..=60));
+                                ui.end_row();
 
-                            ui.label("Screensaver Style:");
-                            egui::ComboBox::from_id_source("screensaver_style_selector")
-                                .selected_text(self.new_screensaver_style.name())
-                                .width(180.0)
-                                .show_ui(ui, |ui| {
-                                    for style in ScreensaverStyle::all() {
-                                        ui.selectable_value(
-                                            &mut self.new_screensaver_style,
-                                            *style,
-                                            style.name(),
-                                        );
-                                    }
-                                });
-                            ui.end_row();
+                                ui.label("Warning Time (seconds):");
+                                ui.add_sized(
+                                    [180.0, 22.0],
+                                    egui::DragValue::new(&mut self.new_warning_time_seconds).range(5..=300),
+                                );
+                                ui.end_row();
 
-                            ui.label("New Password (optional):");
-                            ui.add_sized(
-                                [180.0, 22.0],
-                                egui::TextEdit::singleline(&mut self.new_password_input)
-                                    .password(true),
-                            );
-                            ui.end_row();
+                                ui.label("Screensaver Style:");
+                                egui::ComboBox::from_id_source("screensaver_style_selector")
+                                    .selected_text(self.new_screensaver_style.name())
+                                    .width(180.0)
+                                    .show_ui(ui, |ui| {
+                                        for style in ScreensaverStyle::all() {
+                                            ui.selectable_value(
+                                                &mut self.new_screensaver_style,
+                                                *style,
+                                                style.name(),
+                                            );
+                                        }
+                                    });
+                                ui.end_row();
 
-                            ui.label("Enable Debug Logging:");
-                            ui.checkbox(&mut self.new_enable_logging, "");
-                            ui.end_row();
-                        });
+                                ui.label("New Password (optional):");
+                                ui.add_sized(
+                                    [180.0, 22.0],
+                                    egui::TextEdit::singleline(&mut self.new_password_input)
+                                        .password(true),
+                                );
+                                ui.end_row();
 
-                    ui.add_space(16.0);
+                                ui.label("Enable Debug Logging:");
+                                ui.checkbox(&mut self.new_enable_logging, "");
+                                ui.end_row();
+                            });
+                    } else {
+                        ui.heading(format!("Style: {}", self.new_screensaver_style.name()));
+                        ui.add_space(8.0);
+
+                        match self.new_screensaver_style {
+                            ScreensaverStyle::Math => {
+                                egui::Grid::new("math_settings_grid")
+                                    .num_columns(2)
+                                    .spacing([16.0, 10.0])
+                                    .show(ui, |ui| {
+                                        ui.label("Questions to Solve:");
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_math_questions_needed).range(1..=20));
+                                        ui.end_row();
+
+                                        ui.label("Min Break Duration (%):");
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_math_min_pause_percent).range(0..=100));
+                                        ui.end_row();
+                                    });
+                            }
+                            _ => {
+                                ui.label(egui::RichText::new("This screensaver style has no custom configuration parameters.")
+                                    .color(egui::Color32::LIGHT_GRAY));
+                            }
+                        }
+                    }
+
+                    ui.add_space(20.0);
 
                     ui.horizontal(|ui| {
                         if ui.button("💾 Save Settings").clicked() {
@@ -603,6 +843,8 @@ impl InterruptApp {
                             self.settings.warning_time_seconds = self.new_warning_time_seconds;
                             self.settings.screensaver_style = self.new_screensaver_style;
                             self.settings.enable_logging = self.new_enable_logging;
+                            self.settings.math_questions_needed = self.new_math_questions_needed;
+                            self.settings.math_min_pause_percent = self.new_math_min_pause_percent;
                             win32::init_logging(self.new_enable_logging);
                             if !self.new_password_input.trim().is_empty() {
                                 self.settings.set_password(&self.new_password_input);
