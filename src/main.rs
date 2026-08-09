@@ -40,6 +40,13 @@ pub struct InterruptApp {
     reset_error_message: Option<String>,
     show_pause_unblock_panel: bool,
     last_pause_interaction: Option<Instant>,
+    
+    // Tray icon integration
+    _tray_icon: Option<tray_icon::TrayIcon>,
+    tray_menu_open_id: tray_icon::menu::MenuId,
+    tray_menu_lock_id: tray_icon::menu::MenuId,
+    tray_menu_exit_id: tray_icon::menu::MenuId,
+    should_exit: bool,
 }
 
 impl InterruptApp {
@@ -84,6 +91,55 @@ impl InterruptApp {
         style.spacing.item_spacing = egui::vec2(8.0, 12.0);
         cc.egui_ctx.set_style(style);
 
+        let tray_menu = tray_icon::menu::Menu::new();
+        let open_item = tray_icon::menu::MenuItem::new("Open Interrupt", true, None);
+        let lock_item = tray_icon::menu::MenuItem::new("Lock Screen Now", true, None);
+        let exit_item = tray_icon::menu::MenuItem::new("Exit", true, None);
+ 
+        let tray_menu_open_id = open_item.id().clone();
+        let tray_menu_lock_id = lock_item.id().clone();
+        let tray_menu_exit_id = exit_item.id().clone();
+ 
+        let _ = tray_menu.append_items(&[
+            &open_item,
+            &tray_icon::menu::PredefinedMenuItem::separator(),
+            &lock_item,
+            &tray_icon::menu::PredefinedMenuItem::separator(),
+            &exit_item,
+        ]);
+
+        let mut icon_rgba = vec![0u8; 32 * 32 * 4];
+        for y in 0..32 {
+            for x in 0..32 {
+                let idx = (y * 32 + x) * 4;
+                let dx = x as f32 - 15.5;
+                let dy = y as f32 - 15.5;
+                let dist = (dx * dx + dy * dy).sqrt();
+                if dist <= 12.0 {
+                    icon_rgba[idx] = 99;      // R
+                    icon_rgba[idx + 1] = 102;  // G
+                    icon_rgba[idx + 2] = 241;  // B
+                    icon_rgba[idx + 3] = 255;  // A
+                }
+                if dist <= 4.0 {
+                    icon_rgba[idx] = 244;      // R
+                    icon_rgba[idx + 1] = 63;   // G
+                    icon_rgba[idx + 2] = 94;   // B
+                    icon_rgba[idx + 3] = 255;  // A
+                }
+            }
+        }
+        let icon = tray_icon::Icon::from_rgba(icon_rgba, 32, 32).ok();
+
+        let _tray_icon = icon.and_then(|i| {
+            tray_icon::TrayIconBuilder::new()
+                .with_menu(Box::new(tray_menu))
+                .with_tooltip("Interrupt - Screen Break Manager")
+                .with_icon(i)
+                .build()
+                .ok()
+        });
+
         Self {
             settings,
             state: AppState::Play,
@@ -108,6 +164,11 @@ impl InterruptApp {
             reset_error_message: None,
             show_pause_unblock_panel: false,
             last_pause_interaction: None,
+            _tray_icon,
+            tray_menu_open_id,
+            tray_menu_lock_id,
+            tray_menu_exit_id,
+            should_exit: false,
         }
     }
 
@@ -170,6 +231,7 @@ impl InterruptApp {
                     self.transition_to_pause(ctx);
                 } else if elapsed >= warning_threshold {
                     self.state = AppState::Warning;
+                    win32::play_sound_warning();
                 }
             }
             AppState::Warning => {
@@ -223,6 +285,7 @@ impl InterruptApp {
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(540.0, 460.0)));
         win32::restore_app_window_normal();
         win32::restore_foreground_window();
+        win32::play_sound_info();
     }
 
     fn try_unblock(&mut self, ctx: &egui::Context) {
@@ -622,6 +685,45 @@ impl InterruptApp {
 
 impl eframe::App for InterruptApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Poll tray menu events
+        if let Ok(event) = tray_icon::menu::MenuEvent::receiver().try_recv() {
+            if event.id == self.tray_menu_open_id {
+                win32::show_app_window(true);
+                ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+                ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+            } else if event.id == self.tray_menu_lock_id {
+                if self.state == AppState::Play || self.state == AppState::Warning {
+                    self.transition_to_pause(ctx);
+                }
+            } else if event.id == self.tray_menu_exit_id {
+                self.should_exit = true;
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            }
+        }
+
+        // Poll tray icon click events
+        if let Ok(event) = tray_icon::TrayIconEvent::receiver().try_recv() {
+            match event {
+                tray_icon::TrayIconEvent::Click { button: tray_icon::MouseButton::Left, .. }
+                | tray_icon::TrayIconEvent::DoubleClick { button: tray_icon::MouseButton::Left, .. } => {
+                    win32::show_app_window(true);
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                }
+                _ => {}
+            }
+        }
+
+        // Intercept close request from window title bar or Alt+F4 to minimize to tray
+        if ctx.input(|i| i.viewport().close_requested()) {
+            if self.should_exit {
+                // Allow eframe process exit to take place
+            } else {
+                ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+                win32::show_app_window(false);
+            }
+        }
+
         // Freeze timer accumulation if settings window is active
         if self.show_settings {
             let dt = Duration::from_secs_f32(ctx.input(|i| i.stable_dt));

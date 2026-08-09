@@ -4,12 +4,13 @@ use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadI
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     VK_ESCAPE, VK_F4, VK_LWIN, VK_RWIN, VK_TAB, keybd_event, KEYEVENTF_KEYUP,
 };
+use windows_sys::Win32::System::Diagnostics::Debug::MessageBeep;
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, CallNextHookEx, EnumThreadWindows, GetForegroundWindow, GetSystemMetrics,
     GetWindowTextW, GetWindowThreadProcessId, IsWindow, SetForegroundWindow, SetWindowLongW, SetWindowPos,
     SetWindowsHookExW, ShowWindow, UnhookWindowsHookEx, GWL_STYLE, HWND_NOTOPMOST, HWND_TOPMOST,
-    KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
-    SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
+    KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MB_ICONINFORMATION, MB_ICONWARNING, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
+    SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, SW_HIDE, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
     WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_VISIBLE,
 };
 
@@ -257,6 +258,27 @@ pub fn log_to_file(msg: &str) {
                 .unwrap_or_default()
                 .as_millis();
             let _ = writeln!(file, "[{}] {}", time, msg);
+        }
+    }
+}
+
+pub fn play_sound_warning() {
+    unsafe {
+        MessageBeep(MB_ICONWARNING);
+    }
+}
+
+pub fn play_sound_info() {
+    unsafe {
+        MessageBeep(MB_ICONINFORMATION);
+    }
+}
+
+pub fn show_app_window(visible: bool) {
+    unsafe {
+        let hwnd = get_app_window_handle();
+        if !hwnd.is_null() {
+            ShowWindow(hwnd, if visible { SW_SHOW } else { SW_HIDE });
         }
     }
 }
