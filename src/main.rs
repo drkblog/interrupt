@@ -1262,7 +1262,7 @@ impl InterruptApp {
                                         ui.end_row();
 
                                         ui.label("Min Break Duration (%):");
-                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_math_min_pause_percent).range(0..=100));
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_math_min_pause_percent).range(30..=100));
                                         ui.end_row();
 
                                         ui.label("Difficulty:");
@@ -1291,7 +1291,7 @@ impl InterruptApp {
                                         ui.end_row();
 
                                         ui.label("Min Break Duration (%):");
-                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_geography_min_pause_percent).range(0..=100));
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_geography_min_pause_percent).range(30..=100));
                                         ui.end_row();
 
                                         ui.label("Difficulty:");

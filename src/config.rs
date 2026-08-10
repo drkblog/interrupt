@@ -15,7 +15,7 @@ fn default_math_questions_needed() -> u32 {
 }
 
 fn default_math_min_pause_percent() -> u32 {
-    0
+    50
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -54,7 +54,7 @@ fn default_geography_questions_needed() -> u32 {
 }
 
 fn default_geography_min_pause_percent() -> u32 {
-    0
+    50
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -123,10 +123,10 @@ impl Default for AppSettings {
             password_hash: hash_password("1234"),
             enable_logging: false,
             math_questions_needed: 3,
-            math_min_pause_percent: 0,
+            math_min_pause_percent: 50,
             math_difficulty: MathDifficulty::Medium,
             geography_questions_needed: 3,
-            geography_min_pause_percent: 0,
+            geography_min_pause_percent: 50,
             geography_difficulty: GeographyDifficulty::Medium,
         }
     }
@@ -137,7 +137,9 @@ impl AppSettings {
         if let Some(path) = Self::config_path() {
             if path.exists() {
                 if let Ok(content) = fs::read_to_string(&path) {
-                    if let Ok(settings) = serde_json::from_str::<AppSettings>(&content) {
+                    if let Ok(mut settings) = serde_json::from_str::<AppSettings>(&content) {
+                        settings.math_min_pause_percent = settings.math_min_pause_percent.clamp(30, 100);
+                        settings.geography_min_pause_percent = settings.geography_min_pause_percent.clamp(30, 100);
                         return settings;
                     }
                 }
@@ -229,5 +231,19 @@ mod tests {
     fn test_geography_difficulty_default() {
         let settings = AppSettings::default();
         assert_eq!(settings.geography_difficulty, GeographyDifficulty::Medium);
+    }
+
+    #[test]
+    fn test_min_pause_percent_defaults_and_clamping() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.math_min_pause_percent, 50);
+        assert_eq!(settings.geography_min_pause_percent, 50);
+
+        let json = r#"{"play_time_minutes":30,"pause_time_minutes":5,"password_hash":"1234","math_min_pause_percent":10,"geography_min_pause_percent":5}"#;
+        let mut loaded: AppSettings = serde_json::from_str(json).unwrap();
+        loaded.math_min_pause_percent = loaded.math_min_pause_percent.clamp(30, 100);
+        loaded.geography_min_pause_percent = loaded.geography_min_pause_percent.clamp(30, 100);
+        assert_eq!(loaded.math_min_pause_percent, 30);
+        assert_eq!(loaded.geography_min_pause_percent, 30);
     }
 }
