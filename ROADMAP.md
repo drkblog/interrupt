@@ -10,7 +10,10 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
 | FT-02 | Audio Notifications and Relaxing Chimes | Proposed |
 | FT-03 | Local Break Analytics and Compliance Logging | Proposed |
 | FT-04 | System Tray Integration and Minimize-to-Tray | Proposed |
-| FT-05 | Math Lock Screen | Proposed |
+| FT-05 | Math Lock Screen | Implemented |
+| FT-06 | Vocabulary & Spelling Quiz Lock Screen | Proposed |
+| FT-07 | Country Flags & Geography Trivia Lock Screen | Proposed |
+| FT-08 | Science & Nature Trivia Lock Screen | Proposed |
 
 ---
 
@@ -52,3 +55,24 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
   - **Medium**: Three digit addition and subtraction, multiplication and division tables or two-step operations (e.g., `12 * 6` or `45 + 5 - 12`).
   - **High**: Multi-step operations with order of operations and division, or simple algebra (e.g., `(15 * 4) / 5 + 18` or solving `4x - 7 = 25`).
 * **Implementation Plan**: Define a configuration setting for math lock screen difficulty levels, render a math challenge input block in the pause screen overlay, and only allow unblocking once the correct answer is entered (or the master password is typed).
+
+### FT-06: Vocabulary & Spelling Quiz Lock Screen
+* **Description**: Present spelling challenges, letter unscrambles, or vocabulary definition matching (e.g., selecting the correct synonym/antonym or filling in missing letters) tailored for school-aged children.
+* **Benefits**:
+  - Enhances spelling accuracy, reading comprehension, and language skills.
+  - Configurable grade levels (e.g., Early Elementary, Upper Elementary, Middle School).
+* **Implementation Plan**: Bundle a curated local dictionary/quiz dataset with categories and grade levels, and render interactive fill-in-the-blank or multiple-choice options on the pause screen.
+
+### FT-07: Country Flags & Geography Trivia Lock Screen
+* **Description**: Test geographic knowledge through visual country flag recognition, capital city quizzes, and map location trivia.
+* **Benefits**:
+  - Promotes global awareness, curiosity about different cultures, and world geography proficiency.
+  - Difficulty settings ranging from major world nations/flags to regional geography and capitals.
+* **Implementation Plan**: Embed scalable vector flags and country dataset inside binary assets, presenting flag choice cards or capital matching prompts during break sessions.
+
+### FT-08: Science & Nature Trivia Lock Screen
+* **Description**: Deliver bite-sized, interactive science quizzes covering topics such as space & astronomy, animal biology, earth science, and physics facts.
+* **Benefits**:
+  - Encourages scientific curiosity and daily STEM learning.
+  - Features explanations after each response to turn break enforcement into a fun learning moment.
+* **Implementation Plan**: Maintain a structured JSON file of age-appropriate STEM questions and explanations, allowing random sampling per break with configurable topic filters.
