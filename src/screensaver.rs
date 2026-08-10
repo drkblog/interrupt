@@ -373,7 +373,10 @@ impl ScreensaverComponent for GeographyScreensaver {
         let time = ui.input(|i| i.time);
         let painter = ui.painter();
 
-        let symbols = ["🌐", "🧭", "🗺️", "📍", "✈️", "⛵", "🌍", "🌎", "🌏"];
+        let symbols = [
+            "🌐", "🇫🇷", "🇯🇵", "🇺🇸", "🇧🇷", "🇩🇪", "🇮🇹", "🇬🇧", "🇨🇦", "🇲🇽", "🇦🇺", "🇪🇸",
+            "🧭", "🇨🇭", "🇰🇷", "🇪🇬", "🇮🇳", "🇿🇦", "🗺️", "📍", "✈️", "⛵", "🌍", "🌎", "🌏",
+        ];
         let num_elements = 24;
 
         for i in 0..num_elements {

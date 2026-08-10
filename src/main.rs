@@ -305,46 +305,66 @@ impl InterruptApp {
         let difficulty = self.settings.geography_difficulty;
         let pool: &[(&str, &str, [&str; 3])] = match difficulty {
             GeographyDifficulty::Low => &[
-                ("What is the capital of France?", "Paris", ["Lyon", "Marseille", "Nice"]),
-                ("Which continent is Brazil in?", "South America", ["North America", "Europe", "Africa"]),
-                ("What is the capital of Japan?", "Tokyo", ["Kyoto", "Osaka", "Yokohama"]),
-                ("What is the capital of the United States?", "Washington, D.C.", ["New York", "Los Angeles", "Chicago"]),
-                ("Which continent is Egypt in?", "Africa", ["Asia", "Europe", "South America"]),
-                ("What is the capital of Italy?", "Rome", ["Milan", "Venice", "Naples"]),
-                ("Which continent is Australia in?", "Oceania", ["Europe", "Asia", "Africa"]),
-                ("What is the capital of Germany?", "Berlin", ["Munich", "Frankfurt", "Hamburg"]),
-                ("What is the capital of Spain?", "Madrid", ["Barcelona", "Seville", "Valencia"]),
-                ("What is the capital of the United Kingdom?", "London", ["Edinburgh", "Dublin", "Manchester"]),
-                ("Which country is known as the Land of the Rising Sun?", "Japan", ["China", "South Korea", "Thailand"]),
-                ("Which country is famous for the Eiffel Tower?", "France", ["Italy", "Germany", "Spain"]),
+                ("Which country has this flag: 🇫🇷?", "France 🇫🇷", ["Italy 🇮🇹", "Spain 🇪🇸", "Germany 🇩🇪"]),
+                ("Which country has this flag: 🇯🇵?", "Japan 🇯🇵", ["China 🇨🇳", "South Korea 🇰🇷", "Thailand 🇹🇭"]),
+                ("Which country has this flag: 🇺🇸?", "United States 🇺🇸", ["Canada 🇨🇦", "United Kingdom 🇬🇧", "Australia 🇦🇺"]),
+                ("Which country has this flag: 🇧🇷?", "Brazil 🇧🇷", ["Argentina 🇦🇷", "Colombia 🇨🇴", "Peru 🇵🇪"]),
+                ("Which country has this flag: 🇩🇪?", "Germany 🇩🇪", ["Austria 🇦🇹", "Belgium 🇧🇪", "Netherlands 🇳🇱"]),
+                ("Which country has this flag: 🇮🇹?", "Italy 🇮🇹", ["France 🇫🇷", "Spain 🇪🇸", "Greece 🇬🇷"]),
+                ("Which country has this flag: 🇬🇧?", "United Kingdom 🇬🇧", ["Ireland 🇮🇪", "Australia 🇦🇺", "New Zealand 🇳🇿"]),
+                ("Which country has this flag: 🇲🇽?", "Mexico 🇲🇽", ["Spain 🇪🇸", "Colombia 🇨🇴", "Argentina 🇦🇷"]),
+                ("What is the capital of France 🇫🇷?", "Paris", ["Lyon", "Marseille", "Nice"]),
+                ("Which continent is Brazil 🇧🇷 in?", "South America", ["North America", "Europe", "Africa"]),
+                ("What is the capital of Japan 🇯🇵?", "Tokyo", ["Kyoto", "Osaka", "Yokohama"]),
+                ("What is the capital of the United States 🇺🇸?", "Washington, D.C.", ["New York", "Los Angeles", "Chicago"]),
+                ("Which continent is Egypt 🇪🇬 in?", "Africa", ["Asia", "Europe", "South America"]),
+                ("What is the capital of Italy 🇮🇹?", "Rome", ["Milan", "Venice", "Naples"]),
+                ("Which continent is Australia 🇦🇺 in?", "Oceania", ["Europe", "Asia", "Africa"]),
+                ("What is the capital of Germany 🇩🇪?", "Berlin", ["Munich", "Frankfurt", "Hamburg"]),
+                ("What is the capital of Spain 🇪🇸?", "Madrid", ["Barcelona", "Seville", "Valencia"]),
+                ("What is the capital of the United Kingdom 🇬🇧?", "London", ["Edinburgh", "Dublin", "Manchester"]),
             ],
             GeographyDifficulty::Medium => &[
-                ("What is the capital of Argentina?", "Buenos Aires", ["Cordoba", "Rosario", "Mendoza"]),
-                ("What is the capital of Canada?", "Ottawa", ["Toronto", "Montreal", "Vancouver"]),
-                ("Which continent is India in?", "Asia", ["Europe", "Africa", "Oceania"]),
-                ("What is the capital of South Korea?", "Seoul", ["Busan", "Incheon", "Daegu"]),
-                ("What is the capital of Mexico?", "Mexico City", ["Guadalajara", "Monterrey", "Cancun"]),
-                ("What is the capital of Greece?", "Athens", ["Thessaloniki", "Heraklion", "Patras"]),
-                ("What is the capital of Sweden?", "Stockholm", ["Gothenburg", "Malmo", "Uppsala"]),
-                ("What is the capital of Thailand?", "Bangkok", ["Chiang Mai", "Phuket", "Pattaya"]),
-                ("What is the capital of Egypt?", "Cairo", ["Alexandria", "Giza", "Luxor"]),
-                ("Which continent is Colombia in?", "South America", ["Central America", "North America", "Africa"]),
-                ("What is the capital of Vietnam?", "Hanoi", ["Ho Chi Minh City", "Da Nang", "Hue"]),
-                ("What is the capital of Norway?", "Oslo", ["Bergen", "Trondheim", "Stavanger"]),
+                ("Which country has this flag: 🇨🇦?", "Canada 🇨🇦", ["United States 🇺🇸", "Australia 🇦🇺", "New Zealand 🇳🇿"]),
+                ("Which country has this flag: 🇦🇷?", "Argentina 🇦🇷", ["Uruguay 🇺🇾", "Chile 🇨🇱", "Brazil 🇧🇷"]),
+                ("Which country has this flag: 🇰🇷?", "South Korea 🇰🇷", ["Japan 🇯🇵", "China 🇨🇳", "Vietnam 🇻🇳"]),
+                ("Which country has this flag: 🇪🇬?", "Egypt 🇪🇬", ["Morocco 🇲🇦", "Saudi Arabia 🇸🇦", "Greece 🇬🇷"]),
+                ("Which country has this flag: 🇸🇪?", "Sweden 🇸🇪", ["Norway 🇳🇴", "Finland 🇫🇮", "Denmark 🇩🇰"]),
+                ("Which country has this flag: 🇬🇷?", "Greece 🇬🇷", ["Italy 🇮🇹", "Turkey 🇹🇷", "Cyprus 🇨🇾"]),
+                ("Which country has this flag: 🇮🇳?", "India 🇮🇳", ["Pakistan 🇵🇰", "Bangladesh 🇧🇩", "Sri Lanka 🇱🇰"]),
+                ("Which country has this flag: 🇨🇴?", "Colombia 🇨🇴", ["Ecuador 🇪🇨", "Venezuela 🇻🇪", "Bolivia 🇧🇴"]),
+                ("What is the capital of Argentina 🇦🇷?", "Buenos Aires", ["Cordoba", "Rosario", "Mendoza"]),
+                ("What is the capital of Canada 🇨🇦?", "Ottawa", ["Toronto", "Montreal", "Vancouver"]),
+                ("Which continent is India 🇮🇳 in?", "Asia", ["Europe", "Africa", "Oceania"]),
+                ("What is the capital of South Korea 🇰🇷?", "Seoul", ["Busan", "Incheon", "Daegu"]),
+                ("What is the capital of Mexico 🇲🇽?", "Mexico City", ["Guadalajara", "Monterrey", "Cancun"]),
+                ("What is the capital of Greece 🇬🇷?", "Athens", ["Thessaloniki", "Heraklion", "Patras"]),
+                ("What is the capital of Sweden 🇸🇪?", "Stockholm", ["Gothenburg", "Malmo", "Uppsala"]),
+                ("What is the capital of Thailand 🇹🇭?", "Bangkok", ["Chiang Mai", "Phuket", "Pattaya"]),
+                ("What is the capital of Egypt 🇪🇬?", "Cairo", ["Alexandria", "Giza", "Luxor"]),
+                ("What is the capital of Norway 🇳🇴?", "Oslo", ["Bergen", "Trondheim", "Stavanger"]),
             ],
             GeographyDifficulty::High => &[
-                ("What is the capital of Australia?", "Canberra", ["Sydney", "Melbourne", "Brisbane"]),
-                ("What is the capital of Brazil?", "Brasilia", ["Rio de Janeiro", "Sao Paulo", "Salvador"]),
-                ("What is the capital of Kazakhstan?", "Astana", ["Almaty", "Shymkent", "Karaganda"]),
-                ("What is the capital of Kenya?", "Nairobi", ["Mombasa", "Kisumu", "Nakuru"]),
-                ("What is the capital of Uruguay?", "Montevideo", ["Salto", "Ciudad de la Costa", "Paysandu"]),
-                ("What is the capital of Madagascar?", "Antananarivo", ["Toamasina", "Antsirabe", "Mahajanga"]),
-                ("What is the capital of Nepal?", "Kathmandu", ["Pokhara", "Lalitpur", "Bharatpur"]),
-                ("What is the capital of Estonia?", "Tallinn", ["Tartu", "Narva", "Parnu"]),
-                ("What is the capital of Morocco?", "Rabat", ["Casablanca", "Marrakesh", "Fes"]),
-                ("What is the capital of Switzerland?", "Bern", ["Zurich", "Geneva", "Basel"]),
-                ("What is the capital of Turkey?", "Ankara", ["Istanbul", "Izmir", "Bursa"]),
-                ("What is the capital of New Zealand?", "Wellington", ["Auckland", "Christchurch", "Hamilton"]),
+                ("Which country has this flag: 🇦🇺?", "Australia 🇦🇺", ["New Zealand 🇳🇿", "United Kingdom 🇬🇧", "Fiji 🇫🇯"]),
+                ("Which country has this flag: 🇨🇭?", "Switzerland 🇨🇭", ["Austria 🇦🇹", "Denmark 🇩🇰", "Sweden 🇸🇪"]),
+                ("Which country has this flag: 🇹🇷?", "Turkey 🇹🇷", ["Greece 🇬🇷", "Egypt 🇪🇬", "Tunisia 🇹🇳"]),
+                ("Which country has this flag: 🇿🇦?", "South Africa 🇿🇦", ["Kenya 🇰🇪", "Nigeria 🇳🇬", "Zimbabwe 🇿🇼"]),
+                ("Which country has this flag: 🇳🇿?", "New Zealand 🇳🇿", ["Australia 🇦🇺", "United Kingdom 🇬🇧", "Iceland 🇮🇸"]),
+                ("Which country has this flag: 🇰🇪?", "Kenya 🇰🇪", ["Ethiopia 🇪🇹", "Tanzania 🇹🇿", "Uganda 🇺🇬"]),
+                ("Which country has this flag: 🇳🇵?", "Nepal 🇳🇵", ["Bhutan 🇧🇹", "India 🇮🇳", "Myanmar 🇲🇲"]),
+                ("Which country has this flag: 🇲🇦?", "Morocco 🇲🇦", ["Algeria 🇩🇿", "Tunisia 🇹🇳", "Egypt 🇪🇬"]),
+                ("What is the capital of Australia 🇦🇺?", "Canberra", ["Sydney", "Melbourne", "Brisbane"]),
+                ("What is the capital of Brazil 🇧🇷?", "Brasilia", ["Rio de Janeiro", "Sao Paulo", "Salvador"]),
+                ("What is the capital of Kazakhstan 🇰🇿?", "Astana", ["Almaty", "Shymkent", "Karaganda"]),
+                ("What is the capital of Kenya 🇰🇪?", "Nairobi", ["Mombasa", "Kisumu", "Nakuru"]),
+                ("What is the capital of Uruguay 🇺🇾?", "Montevideo", ["Salto", "Ciudad de la Costa", "Paysandu"]),
+                ("What is the capital of Madagascar 🇲🇬?", "Antananarivo", ["Toamasina", "Antsirabe", "Mahajanga"]),
+                ("What is the capital of Nepal 🇳🇵?", "Kathmandu", ["Pokhara", "Lalitpur", "Bharatpur"]),
+                ("What is the capital of Estonia 🇪🇪?", "Tallinn", ["Tartu", "Narva", "Parnu"]),
+                ("What is the capital of Morocco 🇲🇦?", "Rabat", ["Casablanca", "Marrakesh", "Fes"]),
+                ("What is the capital of Switzerland 🇨🇭?", "Bern", ["Zurich", "Geneva", "Basel"]),
+                ("What is the capital of Turkey 🇹🇷?", "Ankara", ["Istanbul", "Izmir", "Bursa"]),
+                ("What is the capital of New Zealand 🇳🇿?", "Wellington", ["Auckland", "Christchurch", "Hamilton"]),
             ],
         };
 
@@ -1648,3 +1668,83 @@ fn main() -> eframe::Result<()> {
     win32::log_to_file(&format!("[LOG] main: eframe::run_native returned: {:?}", res));
     res
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use config::GeographyDifficulty;
+
+    #[test]
+    fn test_geography_problem_flag_generation() {
+        let settings = AppSettings::default();
+        let mut app = InterruptApp {
+            settings: settings.clone(),
+            state: AppState::Play,
+            state_start: Instant::now(),
+            password_input: String::new(),
+            settings_password_input: String::new(),
+            password_error: None,
+            settings_unlocked: false,
+            show_settings: false,
+            new_play_time: settings.play_time_minutes,
+            new_pause_time: settings.pause_time_minutes,
+            new_warning_time_seconds: settings.warning_time_seconds,
+            new_screensaver_style: settings.screensaver_style,
+            new_password_input: String::new(),
+            new_enable_logging: settings.enable_logging,
+            settings_message: None,
+            focus_password_field: false,
+            focus_settings_password: false,
+            focus_reset_password: false,
+            show_reset_dialog: false,
+            reset_password_input: String::new(),
+            reset_error_message: None,
+            show_pause_unblock_panel: false,
+            last_pause_interaction: None,
+            tray_registered: false,
+            should_exit: false,
+            math_problem_text: String::new(),
+            math_problem_answer: 0,
+            math_user_input: String::new(),
+            math_solved_count: 0,
+            math_feedback: None,
+            math_feedback_color: egui::Color32::LIGHT_GRAY,
+            geography_question_text: String::new(),
+            geography_choices: Vec::new(),
+            geography_correct_idx: 0,
+            geography_solved_count: 0,
+            geography_feedback: None,
+            geography_feedback_color: egui::Color32::LIGHT_GRAY,
+            active_settings_tab: 0,
+            new_math_questions_needed: settings.math_questions_needed,
+            new_math_min_pause_percent: settings.math_min_pause_percent,
+            new_math_difficulty: settings.math_difficulty,
+            new_geography_questions_needed: settings.geography_questions_needed,
+            new_geography_min_pause_percent: settings.geography_min_pause_percent,
+            new_geography_difficulty: settings.geography_difficulty,
+        };
+
+        for difficulty in &[GeographyDifficulty::Low, GeographyDifficulty::Medium, GeographyDifficulty::High] {
+            app.settings.geography_difficulty = *difficulty;
+            app.generate_geography_problem();
+
+            assert!(!app.geography_question_text.is_empty(), "Geography question text should not be empty");
+            assert_eq!(app.geography_choices.len(), 4, "Geography problem should have exactly 4 choices");
+            assert!(app.geography_correct_idx < 4, "Correct index should be within choices bounds");
+
+            // Verify that the prompt or choices contain flag emojis / unicode flag badges
+            let has_flag_in_prompt = app.geography_question_text.chars().any(|c| c >= '\u{1F1E6}' && c <= '\u{1F1FF}');
+            let has_flag_in_choices = app.geography_choices.iter().any(|choice| {
+                choice.chars().any(|c| c >= '\u{1F1E6}' && c <= '\u{1F1FF}')
+            });
+
+            assert!(
+                has_flag_in_prompt || has_flag_in_choices,
+                "Geography problem for difficulty {:?} should incorporate flag indicators/emojis in prompt or choices",
+                difficulty
+            );
+        }
+    }
+}
+
+
