@@ -51,6 +51,7 @@ src/
 - **Build Release Binary**: `cargo build --release`
 
 ## Critical Rules for Agents
+- **Roadmap Maintenance**: All new features must be present in `ROADMAP.md` and their implementation status (Proposed, In Progress, Implemented) MUST be maintained and kept up to date whenever features are added or completed.
 - **Screensaver Behavior Isolation**: All screensaver variants MUST remain purely visual implementations of the `ScreensaverComponent` trait. The outer container (`render_pause_screen`) MUST handle input focus, password verification, window levels, initial 3-second interaction grace period, 20-second inactivity auto-hide, and unblock mechanics. NEVER alter or duplicate screen lock enforcement logic within individual screensaver variants.
 - **Preserve Keyboard Hook Safety**: Always guarantee `disable_keyboard_hook()` is invoked whenever exiting `Pause` state or unblocking.
 - **Preserve Focus Restoration**: Ensure `capture_foreground_window()` is called right before entering `Pause` state.
