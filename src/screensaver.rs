@@ -7,6 +7,7 @@ pub enum ScreensaverStyle {
     Minimalist,
     Matrix,
     Math,
+    Geography,
 }
 
 impl Default for ScreensaverStyle {
@@ -22,6 +23,7 @@ impl ScreensaverStyle {
             ScreensaverStyle::Minimalist,
             ScreensaverStyle::Matrix,
             ScreensaverStyle::Math,
+            ScreensaverStyle::Geography,
         ]
     }
 
@@ -31,6 +33,7 @@ impl ScreensaverStyle {
             ScreensaverStyle::Minimalist => "Minimalist (Monochrome Dark)",
             ScreensaverStyle::Matrix => "Matrix (Digital Green Rain)",
             ScreensaverStyle::Math => "Math Exercises (Elementary Arithmetic)",
+            ScreensaverStyle::Geography => "Geography & Flags (World Trivia)",
         }
     }
 }
@@ -361,6 +364,57 @@ impl ScreensaverComponent for MathScreensaver {
     }
 }
 
+// 5. Geography Screensaver Component (World Grid & Floating Icons)
+pub struct GeographyScreensaver;
+
+impl ScreensaverComponent for GeographyScreensaver {
+    fn render_visuals(&mut self, ui: &mut egui::Ui, _remaining_sec: u64) {
+        let screen_rect = ui.ctx().screen_rect();
+        let time = ui.input(|i| i.time);
+        let painter = ui.painter();
+
+        let symbols = ["🌐", "🧭", "🗺️", "📍", "✈️", "⛵", "🌍", "🌎", "🌏"];
+        let num_elements = 24;
+
+        for i in 0..num_elements {
+            let seed = (i * 47 + 13) as f64;
+            let size = 20.0 + (seed % 16.0) as f32;
+            let x_base = screen_rect.min.x + ((seed * 83.0) as f32 % screen_rect.width());
+            let x_sway = (time * 0.4 + seed).sin() as f32 * 25.0;
+            let x = x_base + x_sway;
+
+            let loop_height = screen_rect.height() + 80.0;
+            let speed = 15.0 + (seed % 20.0) as f32;
+            let y = screen_rect.max.y - ((time as f32 * speed + (seed * 53.0) as f32) % loop_height);
+
+            let alpha = ((time * 0.7 + seed).sin() * 0.2 + 0.35) as f32;
+            let color = egui::Color32::from_rgba_unmultiplied(
+                56,
+                189,
+                248,
+                (255.0 * alpha) as u8,
+            );
+
+            let symbol = symbols[i % symbols.len()];
+            painter.text(
+                egui::pos2(x, y),
+                egui::Align2::CENTER_CENTER,
+                symbol,
+                egui::FontId::proportional(size),
+                color,
+            );
+        }
+
+        painter.text(
+            screen_rect.center() - egui::vec2(0.0, 200.0),
+            egui::Align2::CENTER_CENTER,
+            "🌍 World Geography & Flags",
+            egui::FontId::proportional(30.0),
+            egui::Color32::from_rgb(56, 189, 248),
+        );
+    }
+}
+
 /// Renders the visual content of the selected screensaver style.
 pub fn render_screensaver_style(
     style: ScreensaverStyle,
@@ -372,6 +426,7 @@ pub fn render_screensaver_style(
         ScreensaverStyle::Minimalist => MinimalistScreensaver.render_visuals(ui, remaining_sec),
         ScreensaverStyle::Matrix => MatrixScreensaver.render_visuals(ui, remaining_sec),
         ScreensaverStyle::Math => MathScreensaver.render_visuals(ui, remaining_sec),
+        ScreensaverStyle::Geography => GeographyScreensaver.render_visuals(ui, remaining_sec),
     }
 }
 
@@ -381,5 +436,6 @@ pub fn get_background_color(style: ScreensaverStyle) -> egui::Color32 {
         ScreensaverStyle::Minimalist => egui::Color32::from_rgb(8, 8, 8),
         ScreensaverStyle::Matrix => egui::Color32::from_rgb(2, 8, 2),
         ScreensaverStyle::Math => egui::Color32::from_rgb(17, 24, 39), // Slate 900
+        ScreensaverStyle::Geography => egui::Color32::from_rgb(13, 27, 42), // Deep Ocean Navy
     }
 }

@@ -4,7 +4,7 @@ mod config;
 mod screensaver;
 mod win32;
 
-use config::{AppSettings, MathDifficulty};
+use config::{AppSettings, GeographyDifficulty, MathDifficulty};
 use eframe::egui;
 use screensaver::{get_background_color, render_screensaver_style, ScreensaverStyle};
 use std::time::{Duration, Instant};
@@ -53,10 +53,21 @@ pub struct InterruptApp {
     math_feedback: Option<String>,
     math_feedback_color: egui::Color32,
 
+    // Geography exercises screensaver state
+    geography_question_text: String,
+    geography_choices: Vec<String>,
+    geography_correct_idx: usize,
+    geography_solved_count: u32,
+    geography_feedback: Option<String>,
+    geography_feedback_color: egui::Color32,
+
     active_settings_tab: usize,
     new_math_questions_needed: u32,
     new_math_min_pause_percent: u32,
     new_math_difficulty: MathDifficulty,
+    new_geography_questions_needed: u32,
+    new_geography_min_pause_percent: u32,
+    new_geography_difficulty: GeographyDifficulty,
 }
 
 impl InterruptApp {
@@ -70,6 +81,9 @@ impl InterruptApp {
         let new_math_questions_needed = settings.math_questions_needed;
         let new_math_min_pause_percent = settings.math_min_pause_percent;
         let new_math_difficulty = settings.math_difficulty;
+        let new_geography_questions_needed = settings.geography_questions_needed;
+        let new_geography_min_pause_percent = settings.geography_min_pause_percent;
+        let new_geography_difficulty = settings.geography_difficulty;
 
         win32::init_logging(settings.enable_logging);
         
@@ -136,10 +150,19 @@ impl InterruptApp {
             math_solved_count: 0,
             math_feedback: None,
             math_feedback_color: egui::Color32::LIGHT_GRAY,
+            geography_question_text: String::new(),
+            geography_choices: Vec::new(),
+            geography_correct_idx: 0,
+            geography_solved_count: 0,
+            geography_feedback: None,
+            geography_feedback_color: egui::Color32::LIGHT_GRAY,
             active_settings_tab: 0,
             new_math_questions_needed,
             new_math_min_pause_percent,
             new_math_difficulty,
+            new_geography_questions_needed,
+            new_geography_min_pause_percent,
+            new_geography_difficulty,
         }
     }
 
@@ -273,6 +296,71 @@ impl InterruptApp {
         self.math_user_input.clear();
     }
 
+    fn generate_geography_problem(&mut self) {
+        let ticks = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+
+        let difficulty = self.settings.geography_difficulty;
+        let pool: &[(&str, &str, [&str; 3])] = match difficulty {
+            GeographyDifficulty::Low => &[
+                ("What is the capital of France?", "Paris", ["Lyon", "Marseille", "Nice"]),
+                ("Which continent is Brazil in?", "South America", ["North America", "Europe", "Africa"]),
+                ("What is the capital of Japan?", "Tokyo", ["Kyoto", "Osaka", "Yokohama"]),
+                ("What is the capital of the United States?", "Washington, D.C.", ["New York", "Los Angeles", "Chicago"]),
+                ("Which continent is Egypt in?", "Africa", ["Asia", "Europe", "South America"]),
+                ("What is the capital of Italy?", "Rome", ["Milan", "Venice", "Naples"]),
+                ("Which continent is Australia in?", "Oceania", ["Europe", "Asia", "Africa"]),
+                ("What is the capital of Germany?", "Berlin", ["Munich", "Frankfurt", "Hamburg"]),
+                ("What is the capital of Spain?", "Madrid", ["Barcelona", "Seville", "Valencia"]),
+                ("What is the capital of the United Kingdom?", "London", ["Edinburgh", "Dublin", "Manchester"]),
+                ("Which country is known as the Land of the Rising Sun?", "Japan", ["China", "South Korea", "Thailand"]),
+                ("Which country is famous for the Eiffel Tower?", "France", ["Italy", "Germany", "Spain"]),
+            ],
+            GeographyDifficulty::Medium => &[
+                ("What is the capital of Argentina?", "Buenos Aires", ["Cordoba", "Rosario", "Mendoza"]),
+                ("What is the capital of Canada?", "Ottawa", ["Toronto", "Montreal", "Vancouver"]),
+                ("Which continent is India in?", "Asia", ["Europe", "Africa", "Oceania"]),
+                ("What is the capital of South Korea?", "Seoul", ["Busan", "Incheon", "Daegu"]),
+                ("What is the capital of Mexico?", "Mexico City", ["Guadalajara", "Monterrey", "Cancun"]),
+                ("What is the capital of Greece?", "Athens", ["Thessaloniki", "Heraklion", "Patras"]),
+                ("What is the capital of Sweden?", "Stockholm", ["Gothenburg", "Malmo", "Uppsala"]),
+                ("What is the capital of Thailand?", "Bangkok", ["Chiang Mai", "Phuket", "Pattaya"]),
+                ("What is the capital of Egypt?", "Cairo", ["Alexandria", "Giza", "Luxor"]),
+                ("Which continent is Colombia in?", "South America", ["Central America", "North America", "Africa"]),
+                ("What is the capital of Vietnam?", "Hanoi", ["Ho Chi Minh City", "Da Nang", "Hue"]),
+                ("What is the capital of Norway?", "Oslo", ["Bergen", "Trondheim", "Stavanger"]),
+            ],
+            GeographyDifficulty::High => &[
+                ("What is the capital of Australia?", "Canberra", ["Sydney", "Melbourne", "Brisbane"]),
+                ("What is the capital of Brazil?", "Brasilia", ["Rio de Janeiro", "Sao Paulo", "Salvador"]),
+                ("What is the capital of Kazakhstan?", "Astana", ["Almaty", "Shymkent", "Karaganda"]),
+                ("What is the capital of Kenya?", "Nairobi", ["Mombasa", "Kisumu", "Nakuru"]),
+                ("What is the capital of Uruguay?", "Montevideo", ["Salto", "Ciudad de la Costa", "Paysandu"]),
+                ("What is the capital of Madagascar?", "Antananarivo", ["Toamasina", "Antsirabe", "Mahajanga"]),
+                ("What is the capital of Nepal?", "Kathmandu", ["Pokhara", "Lalitpur", "Bharatpur"]),
+                ("What is the capital of Estonia?", "Tallinn", ["Tartu", "Narva", "Parnu"]),
+                ("What is the capital of Morocco?", "Rabat", ["Casablanca", "Marrakesh", "Fes"]),
+                ("What is the capital of Switzerland?", "Bern", ["Zurich", "Geneva", "Basel"]),
+                ("What is the capital of Turkey?", "Ankara", ["Istanbul", "Izmir", "Bursa"]),
+                ("What is the capital of New Zealand?", "Wellington", ["Auckland", "Christchurch", "Hamilton"]),
+            ],
+        };
+
+        let idx = (ticks as usize) % pool.len();
+        let (prompt, correct, wrong) = pool[idx];
+
+        let mut choices = vec![wrong[0].to_string(), wrong[1].to_string(), wrong[2].to_string()];
+        let correct_idx = ((ticks >> 4) % 4) as usize;
+        choices.insert(correct_idx, correct.to_string());
+
+        self.geography_question_text = prompt.to_string();
+        self.geography_choices = choices;
+        self.geography_correct_idx = correct_idx;
+        self.geography_feedback = None;
+    }
+
     fn draw_circular_timer(
         &self,
         ui: &mut egui::Ui,
@@ -387,6 +475,9 @@ impl InterruptApp {
         self.new_math_questions_needed = self.settings.math_questions_needed;
         self.new_math_min_pause_percent = self.settings.math_min_pause_percent;
         self.new_math_difficulty = self.settings.math_difficulty;
+        self.new_geography_questions_needed = self.settings.geography_questions_needed;
+        self.new_geography_min_pause_percent = self.settings.geography_min_pause_percent;
+        self.new_geography_difficulty = self.settings.geography_difficulty;
         self.active_settings_tab = 0;
     }
 
@@ -445,6 +536,13 @@ impl InterruptApp {
                     if elapsed.as_secs() >= min_dur_sec as u64 {
                         self.transition_to_play(ctx, "math exercises complete & min duration met");
                     }
+                } else if self.settings.screensaver_style == ScreensaverStyle::Geography
+                    && self.geography_solved_count >= self.settings.geography_questions_needed
+                {
+                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.geography_min_pause_percent) / 100;
+                    if elapsed.as_secs() >= min_dur_sec as u64 {
+                        self.transition_to_play(ctx, "geography exercises complete & min duration met");
+                    }
                 }
             }
         }
@@ -465,6 +563,10 @@ impl InterruptApp {
         self.math_solved_count = 0;
         self.math_feedback = None;
         self.generate_math_problem();
+
+        self.geography_solved_count = 0;
+        self.geography_feedback = None;
+        self.generate_geography_problem();
 
         let rect = win32::get_virtual_screen_rect();
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
@@ -580,7 +682,7 @@ impl InterruptApp {
 
             if is_interacting {
                 self.last_pause_interaction = Some(Instant::now());
-                if self.settings.screensaver_style != ScreensaverStyle::Math && !self.show_pause_unblock_panel {
+                if self.settings.screensaver_style != ScreensaverStyle::Math && self.settings.screensaver_style != ScreensaverStyle::Geography && !self.show_pause_unblock_panel {
                     self.show_pause_unblock_panel = true;
                     self.focus_password_field = true;
                 }
@@ -742,6 +844,151 @@ impl InterruptApp {
                                                 egui::RichText::new(feedback)
                                                     .size(14.0)
                                                     .color(self.math_feedback_color),
+                                            );
+                                        }
+                                    }
+
+                                    if !self.show_pause_unblock_panel {
+                                        ui.add_space(12.0);
+                                        if ui.link("🔑 Use Administrator Password").clicked() {
+                                            self.show_pause_unblock_panel = true;
+                                            self.focus_password_field = true;
+                                        }
+                                    }
+                                });
+                            });
+                    }
+
+                    if self.settings.screensaver_style == ScreensaverStyle::Geography {
+                        ui.add_space(20.0);
+                        egui::Frame::none()
+                            .fill(egui::Color32::from_rgba_unmultiplied(15, 23, 42, 220))
+                            .rounding(16.0)
+                            .stroke(egui::Stroke::new(1.5, egui::Color32::from_rgba_unmultiplied(56, 189, 248, 100)))
+                            .inner_margin(egui::Margin::same(24.0))
+                            .show(ui, |ui| {
+                                ui.set_max_width(460.0);
+                                ui.vertical_centered(|ui| {
+                                    ui.label(
+                                        egui::RichText::new("🌍 World Geography Quiz")
+                                            .size(24.0)
+                                            .strong()
+                                            .color(egui::Color32::from_rgb(56, 189, 248)),
+                                    );
+                                    ui.add_space(4.0);
+                                    
+                                    let total_needed = self.settings.geography_questions_needed;
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Answer {} geography questions to unlock early ({}/{} solved)",
+                                            total_needed,
+                                            self.geography_solved_count,
+                                            total_needed
+                                        ))
+                                        .size(14.0)
+                                        .color(egui::Color32::LIGHT_GRAY),
+                                    );
+                                    ui.add_space(16.0);
+
+                                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.geography_min_pause_percent) / 100;
+                                    let elapsed_sec = self.state_start.elapsed().as_secs();
+
+                                    self.draw_circular_timer(
+                                        ui,
+                                        elapsed_sec as f32,
+                                        (self.settings.pause_time_minutes * 60) as f32,
+                                        min_dur_sec as f32,
+                                    );
+                                    ui.add_space(20.0);
+
+                                    if self.geography_solved_count >= total_needed {
+                                        ui.label(
+                                            egui::RichText::new("🎉 All questions solved!")
+                                                .size(20.0)
+                                                .strong()
+                                                .color(egui::Color32::from_rgb(52, 211, 153)),
+                                        );
+                                        ui.add_space(8.0);
+                                        ui.label(
+                                            egui::RichText::new("Break must continue to meet the minimum required off-game duration.")
+                                                .size(14.0)
+                                                .color(egui::Color32::YELLOW),
+                                        );
+                                    } else {
+                                        ui.label(
+                                            egui::RichText::new(&self.geography_question_text)
+                                                .size(18.0)
+                                                .strong()
+                                                .color(egui::Color32::WHITE),
+                                        );
+                                        ui.add_space(16.0);
+
+                                        let mut selected_choice: Option<usize> = None;
+                                        egui::Grid::new("geo_choices_grid")
+                                            .num_columns(2)
+                                            .spacing([12.0, 10.0])
+                                            .show(ui, |ui| {
+                                                for (idx, choice) in self.geography_choices.iter().enumerate() {
+                                                    let btn = ui.add_sized(
+                                                        [200.0, 36.0],
+                                                        egui::Button::new(
+                                                            egui::RichText::new(format!("{}. {}", idx + 1, choice))
+                                                                .size(14.0)
+                                                                .strong()
+                                                        )
+                                                    );
+                                                    if btn.clicked() {
+                                                        selected_choice = Some(idx);
+                                                    }
+                                                    if idx % 2 == 1 {
+                                                        ui.end_row();
+                                                    }
+                                                }
+                                            });
+
+                                        if selected_choice.is_none() {
+                                            for idx in 0..self.geography_choices.len() {
+                                                let key = match idx {
+                                                    0 => egui::Key::Num1,
+                                                    1 => egui::Key::Num2,
+                                                    2 => egui::Key::Num3,
+                                                    3 => egui::Key::Num4,
+                                                    _ => egui::Key::Num0,
+                                                };
+                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel || !self.focus_password_field) {
+                                                    selected_choice = Some(idx);
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        if let Some(idx) = selected_choice {
+                                            if idx == self.geography_correct_idx {
+                                                self.geography_solved_count += 1;
+                                                if self.geography_solved_count >= total_needed {
+                                                    if elapsed_sec >= min_dur_sec as u64 {
+                                                        self.transition_to_play(ctx, "solved geography exercises");
+                                                    } else {
+                                                        self.geography_feedback = Some("Correct! All questions solved! Waiting for break duration...".to_string());
+                                                        self.geography_feedback_color = egui::Color32::from_rgb(52, 211, 153);
+                                                    }
+                                                } else {
+                                                    self.geography_feedback = Some("Correct! Excellent job! Next question...".to_string());
+                                                    self.geography_feedback_color = egui::Color32::from_rgb(52, 211, 153);
+                                                    self.generate_geography_problem();
+                                                }
+                                            } else {
+                                                self.geography_feedback = Some("Incorrect choice, try again!".to_string());
+                                                self.geography_feedback_color = egui::Color32::from_rgb(248, 113, 113);
+                                            }
+                                        }
+
+                                        if let Some(ref feedback) = self.geography_feedback {
+                                            ui.add_space(10.0);
+                                            ui.label(
+                                                egui::RichText::new(feedback)
+                                                    .size(14.0)
+                                                    .color(self.geography_feedback_color),
                                             );
                                         }
                                     }
@@ -1034,6 +1281,35 @@ impl InterruptApp {
                                         ui.end_row();
                                     });
                             }
+                            ScreensaverStyle::Geography => {
+                                egui::Grid::new("geography_settings_grid")
+                                    .num_columns(2)
+                                    .spacing([16.0, 10.0])
+                                    .show(ui, |ui| {
+                                        ui.label("Questions to Solve:");
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_geography_questions_needed).range(1..=20));
+                                        ui.end_row();
+
+                                        ui.label("Min Break Duration (%):");
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_geography_min_pause_percent).range(0..=100));
+                                        ui.end_row();
+
+                                        ui.label("Difficulty:");
+                                        egui::ComboBox::from_id_source("geography_difficulty_selector")
+                                            .selected_text(self.new_geography_difficulty.name())
+                                            .width(180.0)
+                                            .show_ui(ui, |ui| {
+                                                for diff in GeographyDifficulty::all() {
+                                                    ui.selectable_value(
+                                                        &mut self.new_geography_difficulty,
+                                                        *diff,
+                                                        diff.name(),
+                                                    );
+                                                }
+                                            });
+                                        ui.end_row();
+                                    });
+                            }
                             _ => {
                                 ui.label(egui::RichText::new("This screensaver style has no custom configuration parameters.")
                                     .color(egui::Color32::LIGHT_GRAY));
@@ -1053,6 +1329,9 @@ impl InterruptApp {
                             self.settings.math_questions_needed = self.new_math_questions_needed;
                             self.settings.math_min_pause_percent = self.new_math_min_pause_percent;
                             self.settings.math_difficulty = self.new_math_difficulty;
+                            self.settings.geography_questions_needed = self.new_geography_questions_needed;
+                            self.settings.geography_min_pause_percent = self.new_geography_min_pause_percent;
+                            self.settings.geography_difficulty = self.new_geography_difficulty;
                             win32::init_logging(self.new_enable_logging);
                             if !self.new_password_input.trim().is_empty() {
                                 self.settings.set_password(&self.new_password_input);

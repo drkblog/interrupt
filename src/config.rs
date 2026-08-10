@@ -49,6 +49,45 @@ fn default_math_difficulty() -> MathDifficulty {
     MathDifficulty::Medium
 }
 
+fn default_geography_questions_needed() -> u32 {
+    3
+}
+
+fn default_geography_min_pause_percent() -> u32 {
+    0
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum GeographyDifficulty {
+    Low,
+    Medium,
+    High,
+}
+
+impl Default for GeographyDifficulty {
+    fn default() -> Self {
+        GeographyDifficulty::Medium
+    }
+}
+
+impl GeographyDifficulty {
+    pub fn all() -> &'static [GeographyDifficulty] {
+        &[GeographyDifficulty::Low, GeographyDifficulty::Medium, GeographyDifficulty::High]
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            GeographyDifficulty::Low => "Low (Well-Known Nations)",
+            GeographyDifficulty::Medium => "Medium (Secondary Nations)",
+            GeographyDifficulty::High => "High (Global Nations & Capitals)",
+        }
+    }
+}
+
+fn default_geography_difficulty() -> GeographyDifficulty {
+    GeographyDifficulty::Medium
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub play_time_minutes: u32,
@@ -66,6 +105,12 @@ pub struct AppSettings {
     pub math_min_pause_percent: u32,
     #[serde(default = "default_math_difficulty")]
     pub math_difficulty: MathDifficulty,
+    #[serde(default = "default_geography_questions_needed")]
+    pub geography_questions_needed: u32,
+    #[serde(default = "default_geography_min_pause_percent")]
+    pub geography_min_pause_percent: u32,
+    #[serde(default = "default_geography_difficulty")]
+    pub geography_difficulty: GeographyDifficulty,
 }
 
 impl Default for AppSettings {
@@ -80,6 +125,9 @@ impl Default for AppSettings {
             math_questions_needed: 3,
             math_min_pause_percent: 0,
             math_difficulty: MathDifficulty::Medium,
+            geography_questions_needed: 3,
+            geography_min_pause_percent: 0,
+            geography_difficulty: GeographyDifficulty::Medium,
         }
     }
 }
@@ -175,5 +223,11 @@ mod tests {
     fn test_math_difficulty_default() {
         let settings = AppSettings::default();
         assert_eq!(settings.math_difficulty, MathDifficulty::Medium);
+    }
+
+    #[test]
+    fn test_geography_difficulty_default() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.geography_difficulty, GeographyDifficulty::Medium);
     }
 }
