@@ -4,7 +4,7 @@ mod config;
 mod screensaver;
 mod win32;
 
-use config::AppSettings;
+use config::{AppSettings, MathDifficulty};
 use eframe::egui;
 use screensaver::{get_background_color, render_screensaver_style, ScreensaverStyle};
 use std::time::{Duration, Instant};
@@ -53,10 +53,10 @@ pub struct InterruptApp {
     math_feedback: Option<String>,
     math_feedback_color: egui::Color32,
 
-    // Settings tab selection and cached variables
     active_settings_tab: usize,
     new_math_questions_needed: u32,
     new_math_min_pause_percent: u32,
+    new_math_difficulty: MathDifficulty,
 }
 
 impl InterruptApp {
@@ -69,6 +69,7 @@ impl InterruptApp {
         let new_enable_logging = settings.enable_logging;
         let new_math_questions_needed = settings.math_questions_needed;
         let new_math_min_pause_percent = settings.math_min_pause_percent;
+        let new_math_difficulty = settings.math_difficulty;
 
         win32::init_logging(settings.enable_logging);
         
@@ -138,6 +139,7 @@ impl InterruptApp {
             active_settings_tab: 0,
             new_math_questions_needed,
             new_math_min_pause_percent,
+            new_math_difficulty,
         }
     }
 
@@ -159,24 +161,113 @@ impl InterruptApp {
             .unwrap_or_default()
             .as_nanos();
         
-        let op = (ticks % 3) as u32;
-        let (problem, answer) = match op {
-            0 => {
-                let a = ((ticks % 89) + 10) as i32; // 10..98
-                let b = (((ticks >> 4) % 89) + 10) as i32;
-                (format!("{} + {}", a, b), a + b)
+        let difficulty = self.settings.math_difficulty;
+        let (problem, answer) = match difficulty {
+            MathDifficulty::Low => {
+                let op = (ticks % 2) as u32;
+                match op {
+                    0 => {
+                        // Addition with total <= 40, single/double digits
+                        let total = (ticks % 41) as i32; // 0..=40
+                        let a = ((ticks >> 4) % (total as u128 + 1)) as i32;
+                        let b = total - a;
+                        (format!("{} + {}", a, b), total)
+                    }
+                    _ => {
+                        // Subtraction with total <= 40, single/double digits
+                        let total = (ticks % 41) as i32; // 0..=40
+                        let b = ((ticks >> 4) % 60) as i32; // 0..=59
+                        let a = total + b;
+                        (format!("{} - {}", a, b), total)
+                    }
+                }
             }
-            1 => {
-                let a = ((ticks % 89) + 10) as i32;
-                let b = (((ticks >> 4) % (a as u128 - 9)) + 9) as i32;
-                (format!("{} - {}", a, b), a - b)
+            MathDifficulty::Medium => {
+                let op = (ticks % 4) as u32;
+                match op {
+                    0 => {
+                        // 3-digit addition
+                        let a = ((ticks % 900) + 100) as i32;
+                        let b = (((ticks >> 4) % 900) + 100) as i32;
+                        (format!("{} + {}", a, b), a + b)
+                    }
+                    1 => {
+                        // 3-digit subtraction
+                        let a = ((ticks % 800) + 200) as i32; // 200..999
+                        let b = (((ticks >> 4) % (a as u128 - 100)) + 100) as i32; // 100..(a-1)
+                        (format!("{} - {}", a, b), a - b)
+                    }
+                    2 => {
+                        // Multiplication / division tables
+                        let sub_op = (ticks >> 8) % 2;
+                        if sub_op == 0 {
+                            let a = ((ticks % 11) + 2) as i32; // 2..12
+                            let b = (((ticks >> 4) % 11) + 2) as i32; // 2..12
+                            (format!("{} × {}", a, b), a * b)
+                        } else {
+                            let a = ((ticks % 11) + 2) as i32; // 2..12
+                            let b = (((ticks >> 4) % 11) + 2) as i32; // 2..12
+                            let c = a * b;
+                            (format!("{} ÷ {}", c, a), b)
+                        }
+                    }
+                    _ => {
+                        // Two-step operations
+                        let sub_op = (ticks >> 8) % 2;
+                        if sub_op == 0 {
+                            let a = ((ticks % 41) + 10) as i32; // 10..50
+                            let b = (((ticks >> 4) % 41) + 10) as i32; // 10..50
+                            let c = (((ticks >> 12) % ((a + b) as u128 - 2)) + 2) as i32;
+                            (format!("{} + {} - {}", a, b, c), a + b - c)
+                        } else {
+                            let a = ((ticks % 41) + 20) as i32; // 20..60
+                            let b = (((ticks >> 4) % (a as u128 - 10)) + 10) as i32; // 10..(a-1)
+                            let c = (((ticks >> 12) % 41) + 10) as i32; // 10..50
+                            (format!("{} - {} + {}", a, b, c), a - b + c)
+                        }
+                    }
+                }
             }
-            _ => {
-                let a = ((ticks % 11) + 2) as i32; // 2..12
-                let b = (((ticks >> 4) % 11) + 2) as i32; // 2..12
-                (format!("{} × {}", a, b), a * b)
+            MathDifficulty::High => {
+                let op = (ticks % 3) as u32;
+                match op {
+                    0 => {
+                        // Parentheses, multiplication, division, addition
+                        let c = ((ticks % 9) + 2) as i32; // 2..10
+                        let factor = (((ticks >> 4) % 11) + 2) as i32; // 2..12
+                        let a = c * factor;
+                        let b = (((ticks >> 8) % 9) + 2) as i32; // 2..10
+                        let d = (((ticks >> 12) % 46) + 5) as i32; // 5..50
+                        (format!("({} × {}) ÷ {} + {}", a, b, c, d), (a * b) / c + d)
+                    }
+                    1 => {
+                        // Algebra: ax + b = c or ax - b = c, solve for x
+                        let a = ((ticks % 9) + 2) as i32; // 2..10
+                        let x = (((ticks >> 4) % 9) + 2) as i32; // 2..10
+                        let sub_op = (ticks >> 12) % 2;
+                        if sub_op == 0 {
+                            let b = (((ticks >> 8) % 20) + 1) as i32; // 1..20
+                            let c = a * x + b;
+                            (format!("Solve: {}x + {} = {}", a, b, c), x)
+                        } else {
+                            let limit = (a * x - 1).max(1) as u128;
+                            let b = (((ticks >> 8) % limit) + 1) as i32;
+                            let c = a * x - b;
+                            (format!("Solve: {}x - {} = {}", a, b, c), x)
+                        }
+                    }
+                    _ => {
+                        // Complex multiplication, subtraction, addition
+                        let a = ((ticks % 11) + 10) as i32; // 10..20
+                        let b = (((ticks >> 4) % 6) + 3) as i32; // 3..8
+                        let c = (((ticks >> 8) % 41) + 10) as i32; // 10..50
+                        let d = (((ticks >> 12) % 26) + 5) as i32; // 5..30
+                        (format!("{} × {} - {} + {}", a, b, c, d), a * b - c + d)
+                    }
+                }
             }
         };
+        
         self.math_problem_text = problem;
         self.math_problem_answer = answer;
         self.math_user_input.clear();
@@ -295,6 +386,7 @@ impl InterruptApp {
         self.new_enable_logging = self.settings.enable_logging;
         self.new_math_questions_needed = self.settings.math_questions_needed;
         self.new_math_min_pause_percent = self.settings.math_min_pause_percent;
+        self.new_math_difficulty = self.settings.math_difficulty;
         self.active_settings_tab = 0;
     }
 
@@ -925,6 +1017,21 @@ impl InterruptApp {
                                         ui.label("Min Break Duration (%):");
                                         ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_math_min_pause_percent).range(0..=100));
                                         ui.end_row();
+
+                                        ui.label("Difficulty:");
+                                        egui::ComboBox::from_id_source("math_difficulty_selector")
+                                            .selected_text(self.new_math_difficulty.name())
+                                            .width(180.0)
+                                            .show_ui(ui, |ui| {
+                                                for diff in MathDifficulty::all() {
+                                                    ui.selectable_value(
+                                                        &mut self.new_math_difficulty,
+                                                        *diff,
+                                                        diff.name(),
+                                                    );
+                                                }
+                                            });
+                                        ui.end_row();
                                     });
                             }
                             _ => {
@@ -945,6 +1052,7 @@ impl InterruptApp {
                             self.settings.enable_logging = self.new_enable_logging;
                             self.settings.math_questions_needed = self.new_math_questions_needed;
                             self.settings.math_min_pause_percent = self.new_math_min_pause_percent;
+                            self.settings.math_difficulty = self.new_math_difficulty;
                             win32::init_logging(self.new_enable_logging);
                             if !self.new_password_input.trim().is_empty() {
                                 self.settings.set_password(&self.new_password_input);

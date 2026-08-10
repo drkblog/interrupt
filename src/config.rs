@@ -18,6 +18,37 @@ fn default_math_min_pause_percent() -> u32 {
     0
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MathDifficulty {
+    Low,
+    Medium,
+    High,
+}
+
+impl Default for MathDifficulty {
+    fn default() -> Self {
+        MathDifficulty::Medium
+    }
+}
+
+impl MathDifficulty {
+    pub fn all() -> &'static [MathDifficulty] {
+        &[MathDifficulty::Low, MathDifficulty::Medium, MathDifficulty::High]
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            MathDifficulty::Low => "Low",
+            MathDifficulty::Medium => "Medium",
+            MathDifficulty::High => "High",
+        }
+    }
+}
+
+fn default_math_difficulty() -> MathDifficulty {
+    MathDifficulty::Medium
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub play_time_minutes: u32,
@@ -33,6 +64,8 @@ pub struct AppSettings {
     pub math_questions_needed: u32,
     #[serde(default = "default_math_min_pause_percent")]
     pub math_min_pause_percent: u32,
+    #[serde(default = "default_math_difficulty")]
+    pub math_difficulty: MathDifficulty,
 }
 
 impl Default for AppSettings {
@@ -46,6 +79,7 @@ impl Default for AppSettings {
             enable_logging: false,
             math_questions_needed: 3,
             math_min_pause_percent: 0,
+            math_difficulty: MathDifficulty::Medium,
         }
     }
 }
@@ -135,5 +169,11 @@ mod tests {
     fn test_screensaver_style_default() {
         let settings = AppSettings::default();
         assert_eq!(settings.screensaver_style, ScreensaverStyle::Default);
+    }
+
+    #[test]
+    fn test_math_difficulty_default() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.math_difficulty, MathDifficulty::Medium);
     }
 }
