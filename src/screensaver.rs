@@ -33,14 +33,25 @@ impl ScreensaverStyle {
     }
 
     pub fn name(&self) -> &'static str {
-        match self {
-            ScreensaverStyle::Default => "Default (Ambient Aurora)",
-            ScreensaverStyle::Minimalist => "Minimalist (Monochrome Dark)",
-            ScreensaverStyle::Matrix => "Matrix (Digital Green Rain)",
-            ScreensaverStyle::Math => "Math Exercises (Elementary Arithmetic)",
-            ScreensaverStyle::Geography => "Geography & Flags (World Trivia)",
-            ScreensaverStyle::Vocab => "Vocab & Spelling (Word Quiz)",
-            ScreensaverStyle::Science => "Science & Nature (STEM Trivia)",
+        self.name_localized(Language::English)
+    }
+
+    pub fn name_localized(&self, lang: Language) -> &'static str {
+        match (lang, self) {
+            (Language::Spanish, ScreensaverStyle::Default) => "Predeterminado (Aurora Ambiental)",
+            (Language::Spanish, ScreensaverStyle::Minimalist) => "Minimalista (Monocromático Oscuro)",
+            (Language::Spanish, ScreensaverStyle::Matrix) => "Matrix (Lluvia Verde Digital)",
+            (Language::Spanish, ScreensaverStyle::Math) => "Ejercicios Matemáticos (Aritmética)",
+            (Language::Spanish, ScreensaverStyle::Geography) => "Geografía y Banderas (Trivia Mundial)",
+            (Language::Spanish, ScreensaverStyle::Vocab) => "Vocabulario y Ortografía (Quiz de Palabras)",
+            (Language::Spanish, ScreensaverStyle::Science) => "Ciencia y Naturaleza (Trivia STEM)",
+            (_, ScreensaverStyle::Default) => "Default (Ambient Aurora)",
+            (_, ScreensaverStyle::Minimalist) => "Minimalist (Monochrome Dark)",
+            (_, ScreensaverStyle::Matrix) => "Matrix (Digital Green Rain)",
+            (_, ScreensaverStyle::Math) => "Math Exercises (Elementary Arithmetic)",
+            (_, ScreensaverStyle::Geography) => "Geography & Flags (World Trivia)",
+            (_, ScreensaverStyle::Vocab) => "Vocab & Spelling (Word Quiz)",
+            (_, ScreensaverStyle::Science) => "Science & Nature (STEM Trivia)",
         }
     }
 }

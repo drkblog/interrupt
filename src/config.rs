@@ -38,10 +38,17 @@ impl MathDifficulty {
     }
 
     pub fn name(&self) -> &'static str {
-        match self {
-            MathDifficulty::Low => "Low",
-            MathDifficulty::Medium => "Medium",
-            MathDifficulty::High => "High",
+        self.name_localized(Language::English)
+    }
+
+    pub fn name_localized(&self, lang: Language) -> &'static str {
+        match (lang, self) {
+            (Language::Spanish, MathDifficulty::Low) => "Bajo (Aritmética Básica)",
+            (Language::Spanish, MathDifficulty::Medium) => "Medio (Operaciones Intermedias)",
+            (Language::Spanish, MathDifficulty::High) => "Alto (Operaciones Avanzadas y Álgebra)",
+            (_, MathDifficulty::Low) => "Low (Basic Arithmetic)",
+            (_, MathDifficulty::Medium) => "Medium (Intermediate Arithmetic)",
+            (_, MathDifficulty::High) => "High (Advanced Operations & Algebra)",
         }
     }
 }
@@ -77,10 +84,17 @@ impl GeographyDifficulty {
     }
 
     pub fn name(&self) -> &'static str {
-        match self {
-            GeographyDifficulty::Low => "Low (Well-Known Nations)",
-            GeographyDifficulty::Medium => "Medium (Secondary Nations)",
-            GeographyDifficulty::High => "High (Global Nations & Capitals)",
+        self.name_localized(Language::English)
+    }
+
+    pub fn name_localized(&self, lang: Language) -> &'static str {
+        match (lang, self) {
+            (Language::Spanish, GeographyDifficulty::Low) => "Bajo (Países Conocidos)",
+            (Language::Spanish, GeographyDifficulty::Medium) => "Medio (Países Secundarios)",
+            (Language::Spanish, GeographyDifficulty::High) => "Alto (Naciones Globales y Capitales)",
+            (_, GeographyDifficulty::Low) => "Low (Well-Known Nations)",
+            (_, GeographyDifficulty::Medium) => "Medium (Secondary Nations)",
+            (_, GeographyDifficulty::High) => "High (Global Nations & Capitals)",
         }
     }
 }
@@ -116,10 +130,17 @@ impl VocabDifficulty {
     }
 
     pub fn name(&self) -> &'static str {
-        match self {
-            VocabDifficulty::Low => "Low (Early Elementary / Primaria Inicial)",
-            VocabDifficulty::Medium => "Medium (Upper Elementary / Primaria Superior)",
-            VocabDifficulty::High => "High (Middle School / Secundaria)",
+        self.name_localized(Language::English)
+    }
+
+    pub fn name_localized(&self, lang: Language) -> &'static str {
+        match (lang, self) {
+            (Language::Spanish, VocabDifficulty::Low) => "Bajo (Primaria Inicial)",
+            (Language::Spanish, VocabDifficulty::Medium) => "Medio (Primaria Superior)",
+            (Language::Spanish, VocabDifficulty::High) => "Alto (Secundaria)",
+            (_, VocabDifficulty::Low) => "Low (Early Elementary)",
+            (_, VocabDifficulty::Medium) => "Medium (Upper Elementary)",
+            (_, VocabDifficulty::High) => "High (Middle School)",
         }
     }
 }
@@ -155,10 +176,17 @@ impl ScienceDifficulty {
     }
 
     pub fn name(&self) -> &'static str {
-        match self {
-            ScienceDifficulty::Low => "Low (Basic Science & Nature)",
-            ScienceDifficulty::Medium => "Medium (Intermediate STEM & Space)",
-            ScienceDifficulty::High => "High (Advanced Physics & Biology)",
+        self.name_localized(Language::English)
+    }
+
+    pub fn name_localized(&self, lang: Language) -> &'static str {
+        match (lang, self) {
+            (Language::Spanish, ScienceDifficulty::Low) => "Bajo (Ciencia Básica y Naturaleza)",
+            (Language::Spanish, ScienceDifficulty::Medium) => "Medio (STEM y Espacio Intermedio)",
+            (Language::Spanish, ScienceDifficulty::High) => "Alto (Física Avanzada y Biología)",
+            (_, ScienceDifficulty::Low) => "Low (Basic Science & Nature)",
+            (_, ScienceDifficulty::Medium) => "Medium (Intermediate STEM & Space)",
+            (_, ScienceDifficulty::High) => "High (Advanced Physics & Biology)",
         }
     }
 }

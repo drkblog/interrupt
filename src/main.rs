@@ -798,16 +798,18 @@ impl InterruptApp {
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
                             ui.heading(
-                                egui::RichText::new("⚠️ SCREEN LOCK WARNING")
+                                egui::RichText::new(tr(self.settings.language, "⚠️ SCREEN LOCK WARNING"))
                                     .color(egui::Color32::WHITE)
                                     .strong(),
                             );
                             ui.add_space(16.0);
                             ui.label(
                                 egui::RichText::new(format!(
-                                    "Screen will lock in {:02}:{:02} minutes",
+                                    "{} {:02}:{:02} {}",
+                                    tr(self.settings.language, "Screen will lock in"),
                                     remaining_sec / 60,
-                                    remaining_sec % 60
+                                    remaining_sec % 60,
+                                    tr(self.settings.language, "minutes")
                                 ))
                                 .color(egui::Color32::YELLOW)
                                 .size(18.0)
@@ -1460,7 +1462,7 @@ impl InterruptApp {
 
                                     if !self.show_pause_unblock_panel {
                                         ui.add_space(12.0);
-                                        if ui.link("🔑 Use Administrator Password").clicked() {
+                                        if ui.link(tr(self.settings.language, "🔑 Use Administrator Password")).clicked() {
                                             self.show_pause_unblock_panel = true;
                                             self.focus_password_field = true;
                                         }
@@ -1480,7 +1482,7 @@ impl InterruptApp {
                             .show(ui, |ui| {
                                 ui.set_max_width(360.0);
                                 ui.label(
-                                    egui::RichText::new("Enter Password to Unblock Early:")
+                                    egui::RichText::new(tr(self.settings.language, "Enter administrator password to unblock immediately:"))
                                         .size(16.0)
                                         .color(egui::Color32::LIGHT_GRAY),
                                 );
@@ -1489,7 +1491,7 @@ impl InterruptApp {
                                 let response = ui.add(
                                     egui::TextEdit::singleline(&mut self.password_input)
                                         .password(true)
-                                        .hint_text("Password...")
+                                        .hint_text(tr(self.settings.language, "Password..."))
                                         .desired_width(320.0),
                                 );
 
@@ -1512,7 +1514,7 @@ impl InterruptApp {
                                 if ui
                                     .add(
                                         egui::Button::new(
-                                            egui::RichText::new("🔓 Unblock Screen")
+                                            egui::RichText::new(format!("🔓 {}", tr(self.settings.language, "Unlock Computer")))
                                                 .size(16.0)
                                                 .strong(),
                                         )
@@ -1523,10 +1525,10 @@ impl InterruptApp {
                                     self.try_unblock(ctx);
                                 }
 
-                                if let Some(ref err) = self.password_error {
+                                if let Some(ref _err) = self.password_error {
                                     ui.add_space(8.0);
                                     ui.label(
-                                        egui::RichText::new(err)
+                                        egui::RichText::new(tr(self.settings.language, "Incorrect password. Please try again."))
                                             .color(egui::Color32::LIGHT_RED)
                                             .size(14.0),
                                     );
@@ -1543,20 +1545,20 @@ impl InterruptApp {
         }
 
         let mut open = self.show_reset_dialog;
-        egui::Window::new("🔄 Reset Timer")
+        egui::Window::new(tr(self.settings.language, "Reset Timer Confirmation"))
             .open(&mut open)
             .resizable(false)
             .collapsible(false)
-            .fixed_size(egui::vec2(320.0, 180.0))
+            .fixed_size(egui::vec2(340.0, 180.0))
             .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
             .show(ctx, |ui| {
-                ui.label("Enter password to reset the play timer:");
+                ui.label(tr(self.settings.language, "Enter password to reset the play timer back to zero:"));
                 ui.add_space(8.0);
 
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut self.reset_password_input)
                         .password(true)
-                        .hint_text("Password..."),
+                        .hint_text(tr(self.settings.language, "Password...")),
                 );
 
                 if self.focus_reset_password {
@@ -1571,19 +1573,19 @@ impl InterruptApp {
                 ui.add_space(8.0);
 
                 ui.horizontal(|ui| {
-                    if ui.button("Confirm Reset").clicked() {
+                    if ui.button(tr(self.settings.language, "Confirm")).clicked() {
                         self.try_reset_timer();
                     }
-                    if ui.button("Cancel").clicked() {
+                    if ui.button(tr(self.settings.language, "Cancel")).clicked() {
                         self.show_reset_dialog = false;
                         self.reset_password_input.clear();
                         self.reset_error_message = None;
                     }
                 });
 
-                if let Some(ref err) = self.reset_error_message {
+                if let Some(ref _err) = self.reset_error_message {
                     ui.add_space(8.0);
-                    ui.label(egui::RichText::new(err).color(egui::Color32::LIGHT_RED));
+                    ui.label(egui::RichText::new(tr(self.settings.language, "Invalid password.")).color(egui::Color32::LIGHT_RED));
                 }
             });
 
@@ -1600,22 +1602,22 @@ impl InterruptApp {
         }
 
         let mut open = self.show_settings;
-        egui::Window::new("⚙ Interrupt Settings")
+        egui::Window::new(tr(self.settings.language, "⚙ Interrupt Settings"))
             .open(&mut open)
             .resizable(false)
             .collapsible(false)
-            .fixed_size(egui::vec2(420.0, 360.0))
+            .fixed_size(egui::vec2(440.0, 380.0))
             .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
             .show(ctx, |ui| {
                 if !self.settings_unlocked {
-                    ui.heading("Authentication Required");
-                    ui.label("Enter current password or master password to access settings:");
+                    ui.heading(tr(self.settings.language, "Authentication Required"));
+                    ui.label(tr(self.settings.language, "Enter current password or master password to access settings:"));
                     ui.add_space(8.0);
 
                     let response = ui.add(
                         egui::TextEdit::singleline(&mut self.settings_password_input)
                             .password(true)
-                            .hint_text("Password..."),
+                            .hint_text(tr(self.settings.language, "Password...")),
                     );
 
                     if self.focus_settings_password {
@@ -1630,18 +1632,18 @@ impl InterruptApp {
                             self.settings_message = None;
                         } else {
                             self.settings_message =
-                                Some("Invalid password authentication.".to_string());
+                                Some(tr(self.settings.language, "Invalid password authentication.").to_string());
                         }
                     }
 
-                    if ui.button("Unlock Settings").clicked() {
+                    if ui.button(tr(self.settings.language, "Unlock Settings")).clicked() {
                         if self.settings.verify_password(&self.settings_password_input) {
                             self.settings_unlocked = true;
                             self.settings_password_input.clear();
                             self.settings_message = None;
                         } else {
                             self.settings_message =
-                                Some("Invalid password authentication.".to_string());
+                                Some(tr(self.settings.language, "Invalid password authentication.").to_string());
                         }
                     }
 
@@ -1649,10 +1651,10 @@ impl InterruptApp {
                         ui.label(egui::RichText::new(msg).color(egui::Color32::LIGHT_RED));
                     }
                 } else {
-                    ui.heading("Configure Settings");
+                    ui.heading(tr(self.settings.language, "Configure Settings"));
                     ui.add_space(4.0);
                     ui.label(
-                        egui::RichText::new("⏸ Timer suspended while settings window is open")
+                        egui::RichText::new(tr(self.settings.language, "⏸ Timer suspended while settings window is open"))
                             .color(egui::Color32::YELLOW)
                             .size(13.0),
                     );
@@ -1660,8 +1662,8 @@ impl InterruptApp {
 
                     // Tab Selector
                     ui.horizontal(|ui| {
-                        ui.selectable_value(&mut self.active_settings_tab, 0, "📅 Break Cycles");
-                        ui.selectable_value(&mut self.active_settings_tab, 1, "🔒 Lock Screen Settings");
+                        ui.selectable_value(&mut self.active_settings_tab, 0, tr(self.settings.language, "📅 Break Cycles"));
+                        ui.selectable_value(&mut self.active_settings_tab, 1, tr(self.settings.language, "🔒 Lock Screen Settings"));
                     });
                     ui.add_space(10.0);
 
@@ -1670,7 +1672,7 @@ impl InterruptApp {
                             .num_columns(2)
                             .spacing([16.0, 10.0])
                             .show(ui, |ui| {
-                                ui.label(tr(self.settings.language, "language_label"));
+                                ui.label(tr(self.settings.language, "Interface Language:"));
                                 egui::ComboBox::from_id_source("language_selector")
                                     .selected_text(self.new_language.name())
                                     .width(180.0)
@@ -1685,37 +1687,37 @@ impl InterruptApp {
                                     });
                                 ui.end_row();
 
-                                ui.label("Play Time (minutes):");
+                                ui.label(tr(self.settings.language, "Play Time (minutes):"));
                                 ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_play_time).range(1..=300));
                                 ui.end_row();
 
-                                ui.label("Pause Time (minutes):");
+                                ui.label(tr(self.settings.language, "Pause Time (minutes):"));
                                 ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_pause_time).range(1..=60));
                                 ui.end_row();
 
-                                ui.label("Warning Time (seconds):");
+                                ui.label(tr(self.settings.language, "Warning Time (seconds):"));
                                 ui.add_sized(
                                     [180.0, 22.0],
                                     egui::DragValue::new(&mut self.new_warning_time_seconds).range(5..=300),
                                 );
                                 ui.end_row();
 
-                                ui.label("Screensaver Style:");
+                                ui.label(tr(self.settings.language, "Screensaver Style:"));
                                 egui::ComboBox::from_id_source("screensaver_style_selector")
-                                    .selected_text(self.new_screensaver_style.name())
+                                    .selected_text(self.new_screensaver_style.name_localized(self.new_language))
                                     .width(180.0)
                                     .show_ui(ui, |ui| {
                                         for style in ScreensaverStyle::all() {
                                             ui.selectable_value(
                                                 &mut self.new_screensaver_style,
                                                 *style,
-                                                style.name(),
+                                                style.name_localized(self.new_language),
                                             );
                                         }
                                     });
                                 ui.end_row();
 
-                                ui.label("New Password (optional):");
+                                ui.label(tr(self.settings.language, "New Password (optional):"));
                                 ui.add_sized(
                                     [180.0, 22.0],
                                     egui::TextEdit::singleline(&mut self.new_password_input)
@@ -1723,12 +1725,12 @@ impl InterruptApp {
                                 );
                                 ui.end_row();
 
-                                ui.label("Enable Debug Logging:");
+                                ui.label(tr(self.settings.language, "Enable Debug Logging:"));
                                 ui.checkbox(&mut self.new_enable_logging, "");
                                 ui.end_row();
                             });
                     } else {
-                        ui.heading(format!("Style: {}", self.new_screensaver_style.name()));
+                        ui.heading(format!("{}: {}", tr(self.settings.language, "Style:"), self.new_screensaver_style.name_localized(self.new_language)));
                         ui.add_space(8.0);
 
                         match self.new_screensaver_style {
@@ -1737,24 +1739,24 @@ impl InterruptApp {
                                     .num_columns(2)
                                     .spacing([16.0, 10.0])
                                     .show(ui, |ui| {
-                                        ui.label("Questions to Solve:");
+                                        ui.label(tr(self.settings.language, "Questions to Solve:"));
                                         ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_math_questions_needed).range(1..=20));
                                         ui.end_row();
 
-                                        ui.label("Min Break Duration (%):");
+                                        ui.label(tr(self.settings.language, "Min Break Duration (%):"));
                                         ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_math_min_pause_percent).range(30..=100));
                                         ui.end_row();
 
-                                        ui.label("Difficulty:");
+                                        ui.label(tr(self.settings.language, "Difficulty:"));
                                         egui::ComboBox::from_id_source("math_difficulty_selector")
-                                            .selected_text(self.new_math_difficulty.name())
+                                            .selected_text(self.new_math_difficulty.name_localized(self.new_language))
                                             .width(180.0)
                                             .show_ui(ui, |ui| {
                                                 for diff in MathDifficulty::all() {
                                                     ui.selectable_value(
                                                         &mut self.new_math_difficulty,
                                                         *diff,
-                                                        diff.name(),
+                                                        diff.name_localized(self.new_language),
                                                     );
                                                 }
                                             });
@@ -1766,24 +1768,24 @@ impl InterruptApp {
                                     .num_columns(2)
                                     .spacing([16.0, 10.0])
                                     .show(ui, |ui| {
-                                        ui.label("Questions to Solve:");
+                                        ui.label(tr(self.settings.language, "Questions to Solve:"));
                                         ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_geography_questions_needed).range(1..=20));
                                         ui.end_row();
 
-                                        ui.label("Min Break Duration (%):");
+                                        ui.label(tr(self.settings.language, "Min Break Duration (%):"));
                                         ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_geography_min_pause_percent).range(30..=100));
                                         ui.end_row();
 
-                                        ui.label("Difficulty:");
+                                        ui.label(tr(self.settings.language, "Difficulty:"));
                                         egui::ComboBox::from_id_source("geography_difficulty_selector")
-                                            .selected_text(self.new_geography_difficulty.name())
+                                            .selected_text(self.new_geography_difficulty.name_localized(self.new_language))
                                             .width(180.0)
                                             .show_ui(ui, |ui| {
                                                 for diff in GeographyDifficulty::all() {
                                                     ui.selectable_value(
                                                         &mut self.new_geography_difficulty,
                                                         *diff,
-                                                        diff.name(),
+                                                        diff.name_localized(self.new_language),
                                                     );
                                                 }
                                             });
@@ -1795,24 +1797,24 @@ impl InterruptApp {
                                     .num_columns(2)
                                     .spacing([16.0, 10.0])
                                     .show(ui, |ui| {
-                                        ui.label("Questions to Solve:");
+                                        ui.label(tr(self.settings.language, "Questions to Solve:"));
                                         ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_vocab_questions_needed).range(1..=20));
                                         ui.end_row();
 
-                                        ui.label("Min Break Duration (%):");
+                                        ui.label(tr(self.settings.language, "Min Break Duration (%):"));
                                         ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_vocab_min_pause_percent).range(30..=100));
                                         ui.end_row();
 
-                                        ui.label("Difficulty:");
+                                        ui.label(tr(self.settings.language, "Difficulty:"));
                                         egui::ComboBox::from_id_source("vocab_difficulty_selector")
-                                            .selected_text(self.new_vocab_difficulty.name())
+                                            .selected_text(self.new_vocab_difficulty.name_localized(self.new_language))
                                             .width(180.0)
                                             .show_ui(ui, |ui| {
                                                 for diff in VocabDifficulty::all() {
                                                     ui.selectable_value(
                                                         &mut self.new_vocab_difficulty,
                                                         *diff,
-                                                        diff.name(),
+                                                        diff.name_localized(self.new_language),
                                                     );
                                                 }
                                             });
@@ -1824,24 +1826,24 @@ impl InterruptApp {
                                     .num_columns(2)
                                     .spacing([16.0, 10.0])
                                     .show(ui, |ui| {
-                                        ui.label("Questions to Solve:");
+                                        ui.label(tr(self.settings.language, "Questions to Solve:"));
                                         ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_science_questions_needed).range(1..=20));
                                         ui.end_row();
 
-                                        ui.label("Min Break Duration (%):");
+                                        ui.label(tr(self.settings.language, "Min Break Duration (%):"));
                                         ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_science_min_pause_percent).range(30..=100));
                                         ui.end_row();
 
-                                        ui.label("Difficulty:");
+                                        ui.label(tr(self.settings.language, "Difficulty:"));
                                         egui::ComboBox::from_id_source("science_difficulty_selector")
-                                            .selected_text(self.new_science_difficulty.name())
+                                            .selected_text(self.new_science_difficulty.name_localized(self.new_language))
                                             .width(180.0)
                                             .show_ui(ui, |ui| {
                                                 for diff in ScienceDifficulty::all() {
                                                     ui.selectable_value(
                                                         &mut self.new_science_difficulty,
                                                         *diff,
-                                                        diff.name(),
+                                                        diff.name_localized(self.new_language),
                                                     );
                                                 }
                                             });
@@ -1849,7 +1851,7 @@ impl InterruptApp {
                                     });
                             }
                             _ => {
-                                ui.label(egui::RichText::new("This screensaver style has no custom configuration parameters.")
+                                ui.label(egui::RichText::new(tr(self.settings.language, "This screensaver style has no custom configuration parameters."))
                                     .color(egui::Color32::LIGHT_GRAY));
                             }
                         }
@@ -1975,15 +1977,18 @@ impl eframe::App for InterruptApp {
                         
                         ui.add_space(8.0);
                         
+                        let mode_name = tr(self.settings.language, "Status: Play Mode");
                         let status_text = if self.show_settings {
                             format!(
-                                "Play Mode [PAUSED] • break in {:02}:{:02}",
+                                "{} [PAUSED] • {:02}:{:02}",
+                                mode_name,
                                 remaining_sec / 60,
                                 remaining_sec % 60
                             )
                         } else {
                             format!(
-                                "Play Mode • break in {:02}:{:02}",
+                                "{} • {:02}:{:02}",
+                                mode_name,
                                 remaining_sec / 60,
                                 remaining_sec % 60
                             )
@@ -1997,7 +2002,7 @@ impl eframe::App for InterruptApp {
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let settings_btn = ui.add(
-                                egui::Button::new(egui::RichText::new("⚙️ Settings").strong())
+                                egui::Button::new(egui::RichText::new(tr(self.settings.language, "⚙️ Settings")).strong())
                                     .min_size(egui::vec2(90.0, 28.0))
                             );
                             if settings_btn.clicked() {
@@ -2012,16 +2017,16 @@ impl eframe::App for InterruptApp {
                     ui.add_space(16.0);
                     
                     ui.label(
-                        egui::RichText::new("Interrupt Screen Time Manager")
+                        egui::RichText::new(tr(self.settings.language, "Interrupt Screen Time Manager"))
                             .size(22.0)
                             .strong()
                             .color(egui::Color32::WHITE)
                     );
                     
                     let sub_label = if self.show_settings {
-                        "Settings open — timer suspended until settings window is closed."
+                        tr(self.settings.language, "Settings open — timer suspended until settings window is closed.")
                     } else {
-                        "Active cycle running. Time remaining until next screen lock:"
+                        tr(self.settings.language, "Active cycle running. Time remaining until next screen lock:")
                     };
                     ui.label(
                         egui::RichText::new(sub_label)
@@ -2094,7 +2099,7 @@ impl eframe::App for InterruptApp {
                         // Primary button
                         let lock_btn = ui.add(
                             egui::Button::new(
-                                egui::RichText::new("🔒 Lock Now").size(16.0).strong().color(egui::Color32::WHITE)
+                                egui::RichText::new(tr(self.settings.language, "🔒 Lock Now")).size(16.0).strong().color(egui::Color32::WHITE)
                             )
                             .fill(egui::Color32::from_rgb(79, 70, 229)) // indigo 600
                             .min_size(egui::vec2(160.0, 40.0))
@@ -2108,7 +2113,7 @@ impl eframe::App for InterruptApp {
                         // Secondary button
                         let reset_btn = ui.add(
                             egui::Button::new(
-                                egui::RichText::new("🔄 Reset Timer").size(16.0).strong().color(egui::Color32::WHITE)
+                                egui::RichText::new(tr(self.settings.language, "🔄 Reset Timer")).size(16.0).strong().color(egui::Color32::WHITE)
                             )
                             .fill(egui::Color32::from_rgb(51, 65, 85)) // slate 700
                             .min_size(egui::vec2(160.0, 40.0))
@@ -2125,10 +2130,10 @@ impl eframe::App for InterruptApp {
                         ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
                         
                         let info_items = vec![
-                            (format!("Play: {}m", self.settings.play_time_minutes), egui::Color32::from_rgb(56, 189, 248)),
-                            (format!("Pause: {}m", self.settings.pause_time_minutes), egui::Color32::from_rgb(168, 85, 247)),
+                            (format!("{}: {} {}", tr(self.settings.language, "Play:"), self.settings.play_time_minutes, tr(self.settings.language, "min")), egui::Color32::from_rgb(56, 189, 248)),
+                            (format!("{}: {} {}", tr(self.settings.language, "Break:"), self.settings.pause_time_minutes, tr(self.settings.language, "min")), egui::Color32::from_rgb(168, 85, 247)),
                             (format!("Warn: {}s", self.settings.warning_time_seconds), egui::Color32::from_rgb(244, 63, 94)),
-                            (format!("Style: {}", self.settings.screensaver_style.name().split(' ').next().unwrap_or("")), egui::Color32::from_rgb(52, 211, 153)),
+                            (format!("{}: {}", tr(self.settings.language, "Style:"), self.settings.screensaver_style.name_localized(self.settings.language).split(' ').next().unwrap_or("")), egui::Color32::from_rgb(52, 211, 153)),
                             ("Master PW: On".to_string(), egui::Color32::from_rgb(148, 163, 184)),
                         ];
                         

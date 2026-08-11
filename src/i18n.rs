@@ -19,163 +19,121 @@ impl Language {
 
     pub fn name(&self) -> &'static str {
         match self {
-            Language::English => "English 🇬B",
-            Language::Spanish => "Español 🇪S",
+            Language::English => "English",
+            Language::Spanish => "Spanish",
         }
     }
 }
 
-pub fn tr(lang: Language, key: &'static str) -> &'static str {
-    match (lang, key) {
-        // Core App & Navigation
-        (Language::English, "app_title") => "Interrupt - Screen Break Enforcer",
-        (Language::Spanish, "app_title") => "Interrupt - Control de Pausas de Pantalla",
+pub fn tr(lang: Language, text: &'static str) -> &'static str {
+    if lang == Language::English {
+        return text;
+    }
 
-        (Language::English, "play_heading") => "SYSTEM ACTIVE // PLAY MODE",
-        (Language::Spanish, "play_heading") => "SISTEMA ACTIVO // MODO JUEGO",
+    match text {
+        // Core App Navigation & Status
+        "app_title" => "Interrupt - Control de Pausas de Pantalla",
+        "Interrupt Screen Time Manager" => "Interrupt - Control de Pausas de Pantalla",
+        "SYSTEM ACTIVE // PLAY MODE" => "SISTEMA ACTIVO // MODO JUEGO",
+        "PRE-LOCK WARNING ACTIVE" => "ADVERTENCIA PREVIA AL BLOQUEO ACTIVA",
+        "SCREEN BREAK IN PROGRESS" => "DESCANSO DE PANTALLA EN PROGRESO",
+        "Active cycle running. Time remaining until next screen lock:" => "Ciclo activo en marcha. Tiempo restante hasta el próximo bloqueo:",
+        "Settings open — timer suspended until settings window is closed." => "Configuración abierta — temporizador suspendido hasta cerrar la ventana.",
+        "Screen break starting soon!" => "¡El descanso de pantalla comenzará pronto!",
+        "Status: Play Mode" => "Estado: Modo Juego",
+        "Status: Warning Period" => "Estado: Período de Advertencia",
+        "Status: Screen Break" => "Estado: Descanso de Pantalla",
+        "Time Remaining:" => "Tiempo Restante:",
+        "Play:" => "Juego:",
+        "Break:" => "Pausa:",
+        "min" => "min",
+        "Style:" => "Estilo:",
+        "🔒 Lock Now" => "🔒 Bloquear Ahora",
+        "🔄 Reset Timer" => "🔄 Reiniciar Temporizador",
+        "⚙️ Settings" => "⚙️ Configuración",
+        "🚪 Exit App" => "🚪 Salir de la App",
 
-        (Language::English, "warning_heading") => "⚠️ SCREEN BREAK IMMINENT",
-        (Language::Spanish, "warning_heading") => "⚠️ DESCANSO DE PANTALLA INMINENTE",
+        // Warning Banner
+        "⚠️ SCREEN LOCK WARNING" => "⚠️ ADVERTENCIA DE BLOQUEO DE PANTALLA",
+        "Screen will lock in" => "La pantalla se bloqueará en",
+        "minutes" => "minutos",
 
-        (Language::English, "lock_now") => "🔒 Lock Now",
-        (Language::Spanish, "lock_now") => "🔒 Bloquear Ahora",
+        // Reset Confirmation Dialog
+        "Reset Timer Confirmation" => "Confirmación de Reinicio de Temporizador",
+        "Enter password to reset the play timer back to zero:" => "Ingrese la contraseña para reiniciar el temporizador de juego:",
+        "Confirm" => "Confirmar",
+        "Cancel" => "Cancelar",
+        "Close" => "Cerrar",
+        "Unlock" => "Desbloquear",
+        "Incorrect password. Please try again." => "Contraseña incorrecta. Por favor intente de nuevo.",
+        "Invalid password." => "Contraseña incorrecta. Por favor intente de nuevo.",
 
-        (Language::English, "reset_timer") => "🔄 Reset Timer",
-        (Language::Spanish, "reset_timer") => "🔄 Reiniciar Temporizador",
+        // Settings Window
+        "⚙ Interrupt Settings" => "⚙ Configuración de Interrupt",
+        "Authentication Required" => "Autenticación Requerida",
+        "Enter current password or master password to access settings:" => "Ingrese la contraseña actual o la contraseña maestra para acceder:",
+        "Password..." => "Contraseña...",
+        "Unlock Settings" => "Desbloquear Configuración",
+        "Invalid password authentication." => "Autenticación de contraseña no válida.",
+        "Configure Settings" => "Configurar Opciones",
+        "⏸ Timer suspended while settings window is open" => "⏸ Temporizador suspendido mientras la ventana de configuración está abierta",
+        "📅 Break Cycles" => "📅 Ciclos de Descanso",
+        "🔒 Lock Screen Settings" => "🔒 Opciones de Pantalla de Bloqueo",
+        "Interface Language:" => "Idioma de la Interfaz:",
+        "Play Time (minutes):" => "Tiempo de Juego (minutos):",
+        "Pause Time (minutes):" => "Tiempo de Pausa (minutos):",
+        "Warning Time (seconds):" => "Tiempo de Advertencia (segundos):",
+        "Screensaver Style:" => "Estilo de Salvapantallas:",
+        "New Password (optional):" => "Nueva Contraseña (opcional):",
+        "Enable Debug Logging:" => "Habilitar Registro de Depuración:",
+        "Questions to Solve:" => "Preguntas a Resolver:",
+        "Min Break Duration (%):" => "Duración Mínima de Pausa (%):",
+        "Difficulty:" => "Dificultad:",
+        "This screensaver style has no custom configuration parameters." => "Este estilo de salvapantallas no tiene parámetros personalizados.",
+        "💾 Save Settings" => "💾 Guardar Configuración",
+        "Settings saved successfully!" => "¡Configuración guardada con éxito!",
+        "Failed to save settings" => "Error al guardar la configuración",
 
-        (Language::English, "settings") => "⚙️ Settings",
-        (Language::Spanish, "settings") => "⚙️ Configuración",
+        // Screensavers Text & Titles
+        "🫁 Inhale deeply..." => "🫁 Inhala profundamente...",
+        "⏸️ Hold..." => "⏸️ Mantén el aire...",
+        "😮‍💨 Exhale slowly..." => "😮‍💨 Exhala lentamente...",
+        "🌿 TIME TO TAKE A BREAK" => "🌿 ES HORA DE TOMAR UN DESCANSO",
+        "Step away, stretch, drink water, and rest your eyes." => "Aléjate de la pantalla, estírate, bebe agua y descansa tus ojos.",
+        "PAUSE" => "PAUSA",
+        "Resting computer screen..." => "Descansando la pantalla...",
+        "SYSTEM PAUSED // SCREEN BREAK" => "SISTEMA EN PAUSA // DESCANSO DE PANTALLA",
+        "> Stand up and stretch before returning to console." => "> Levántate y estírate antes de volver a la consola.",
+        "vocab_title" => "📚 Quiz de Vocabulario y Ortografía",
+        "📚 Vocabulary & Spelling Quiz" => "📚 Quiz de Vocabulario y Ortografía",
+        "science_title" => "🧪 Trivia de Ciencia y Naturaleza",
+        "🧪 Science & Nature Trivia" => "🧪 Trivia de Ciencia y Naturaleza",
+        "geography_title" => "🌍 Geografía y Banderas del Mundo",
+        "🌍 Geography & Country Flags" => "🌍 Geografía y Banderas del Mundo",
+        "math_title" => "🧮 Quiz de Matemáticas",
+        "🧮 Math Quiz" => "🧮 Quiz de Matemáticas",
 
-        (Language::English, "exit") => "❌ Exit",
-        (Language::Spanish, "exit") => "❌ Salir",
+        // Exercise Cards & Quiz Overlay
+        "correct_feedback" => "✨ ¡Correcto! Buen trabajo.",
+        "incorrect_feedback" => "❌ Incorrecto. ¡Inténtalo de nuevo!",
+        "✨ Correct! Great job." => "✨ ¡Correcto! Buen trabajo.",
+        "❌ Incorrect. Try again!" => "❌ Incorrecto. ¡Inténtalo de nuevo!",
+        "Incorrect choice, try again!" => "Opción incorrecta, ¡inténtalo de nuevo!",
+        "Incorrect answer, try again!" => "Respuesta incorrecta, ¡inténtalo de nuevo!",
+        "Type answer..." => "Escriba su respuesta...",
+        "Submit" => "Enviar",
+        "🔑 Use Administrator Password" => "🔑 Usar Contraseña de Administrador",
+        "Enter administrator password to unblock immediately:" => "Ingrese la contraseña de administrador para desbloquear inmediatamente:",
+        "Unlock Computer" => "Desbloquear Equipo",
+        "🎉 All questions solved!" => "🎉 ¡Todas las preguntas resueltas!",
+        "🎉 All geography questions solved!" => "🎉 ¡Todas las preguntas de geografía resueltas!",
+        "🎉 All STEM questions solved!" => "🎉 ¡Todas las preguntas de ciencia resueltas!",
+        "Break must continue to meet the minimum required off-game duration." => "El descanso debe continuar para cumplir la duración mínima requerida sin juego.",
+        "Correct! All questions solved! Waiting for break duration..." => "¡Correcto! ¡Todas las preguntas resueltas! Esperando la duración del descanso...",
+        "Correct! Excellent job! Next question..." => "¡Correcto! ¡Excelente trabajo! Siguiente pregunta...",
 
-        (Language::English, "password_prompt") => "Enter password:",
-        (Language::Spanish, "password_prompt") => "Ingrese contraseña:",
-
-        (Language::English, "password_placeholder") => "Type password here...",
-        (Language::Spanish, "password_placeholder") => "Escriba la contraseña aquí...",
-
-        (Language::English, "unlock") => "Unlock",
-        (Language::Spanish, "unlock") => "Desbloquear",
-
-        (Language::English, "confirm") => "Confirm",
-        (Language::Spanish, "confirm") => "Confirmar",
-
-        (Language::English, "cancel") => "Cancel",
-        (Language::Spanish, "cancel") => "Cancelar",
-
-        (Language::English, "close") => "Close",
-        (Language::Spanish, "close") => "Cerrar",
-
-        (Language::English, "save_settings") => "💾 Save Settings",
-        (Language::Spanish, "save_settings") => "💾 Guardar Configuración",
-
-        (Language::English, "settings_saved") => "✅ Settings saved successfully!",
-        (Language::Spanish, "settings_saved") => "✅ ¡Configuración guardada con éxito!",
-
-        (Language::English, "invalid_password") => "Incorrect password!",
-        (Language::Spanish, "invalid_password") => "¡Contraseña incorrecta!",
-
-        // Settings Tabs
-        (Language::English, "tab_general") => "⚙️ General",
-        (Language::Spanish, "tab_general") => "⚙️ General",
-
-        (Language::English, "tab_screensaver") => "🎨 Screensaver",
-        (Language::Spanish, "tab_screensaver") => "🎨 Salvapantallas",
-
-        (Language::English, "tab_math") => "🧮 Math Lock",
-        (Language::Spanish, "tab_math") => "🧮 Bloqueo Matemático",
-
-        (Language::English, "tab_geography") => "🌍 Geography Lock",
-        (Language::Spanish, "tab_geography") => "🌍 Bloqueo Geográfico",
-
-        (Language::English, "tab_vocab") => "📚 Vocab & Spelling",
-        (Language::Spanish, "tab_vocab") => "📚 Vocabulario y Ortografía",
-
-        (Language::English, "tab_science") => "🧪 Science & Nature",
-        (Language::Spanish, "tab_science") => "🧪 Ciencia y Naturaleza",
-
-        // General Settings Labels
-        (Language::English, "language_label") => "Interface Language:",
-        (Language::Spanish, "language_label") => "Idioma de la interfaz:",
-
-        (Language::English, "play_duration_label") => "Play Time (minutes):",
-        (Language::Spanish, "play_duration_label") => "Tiempo de Juego (minutos):",
-
-        (Language::English, "pause_duration_label") => "Pause Break Time (minutes):",
-        (Language::Spanish, "pause_duration_label") => "Tiempo de Pausa (minutos):",
-
-        (Language::English, "warning_duration_label") => "Warning Alert Time (seconds):",
-        (Language::Spanish, "warning_duration_label") => "Tiempo de Advertencia (segundos):",
-
-        (Language::English, "change_password_label") => "Change Password (leave empty to keep current):",
-        (Language::Spanish, "change_password_label") => "Cambiar Contraseña (dejar vacío para mantener la actual):",
-
-        (Language::English, "screensaver_style_label") => "Active Screensaver Variant:",
-        (Language::Spanish, "screensaver_style_label") => "Variante de Salvapantallas Activa:",
-
-        // Exercise Settings Labels
-        (Language::English, "questions_required_label") => "Questions Required to Unlock:",
-        (Language::Spanish, "questions_required_label") => "Preguntas Requeridas para Desbloquear:",
-
-        (Language::English, "min_pause_percent_label") => "Minimum Pause Time Required (% of total break):",
-        (Language::Spanish, "min_pause_percent_label") => "Tiempo Mínimo de Pausa Requerido (% del descanso):",
-
-        (Language::English, "difficulty_label") => "Difficulty Level / Grade Level:",
-        (Language::Spanish, "difficulty_label") => "Nivel de Dificultad / Nivel Escolar:",
-
-        // Screensavers Text
-        (Language::English, "aurora_inhale") => "🫁 Inhale deeply...",
-        (Language::Spanish, "aurora_inhale") => "🫁 Inhala profundamente...",
-
-        (Language::English, "aurora_hold") => "⏸️ Hold...",
-        (Language::Spanish, "aurora_hold") => "⏸️ Mantén el aire...",
-
-        (Language::English, "aurora_exhale") => "😮‍💨 Exhale slowly...",
-        (Language::Spanish, "aurora_exhale") => "😮‍💨 Exhala lentamente...",
-
-        (Language::English, "aurora_heading") => "🌿 TIME TO TAKE A BREAK",
-        (Language::Spanish, "aurora_heading") => "🌿 ES HORA DE TOMAR UN DESCANSO",
-
-        (Language::English, "aurora_subtext") => "Step away, stretch, drink water, and rest your eyes.",
-        (Language::Spanish, "aurora_subtext") => "Aléjate de la pantalla, estírate, bebe agua y descansa los ojos.",
-
-        (Language::English, "minimalist_heading") => "PAUSE",
-        (Language::Spanish, "minimalist_heading") => "PAUSA",
-
-        (Language::English, "minimalist_subtext") => "Resting computer screen...",
-        (Language::Spanish, "minimalist_subtext") => "Descansando la pantalla...",
-
-        (Language::English, "matrix_heading") => "SYSTEM PAUSED // SCREEN BREAK",
-        (Language::Spanish, "matrix_heading") => "SISTEMA EN PAUSA // DESCANSO",
-
-        (Language::English, "matrix_subtext") => "> Stand up and stretch before returning to console.",
-        (Language::Spanish, "matrix_subtext") => "> Levántate y estírate antes de volver a la consola.",
-
-        (Language::English, "vocab_title") => "📚 Vocabulary & Spelling Quiz",
-        (Language::Spanish, "vocab_title") => "📚 Quiz de Vocabulario y Ortografía",
-
-        (Language::English, "science_title") => "🧪 Science & Nature Trivia",
-        (Language::Spanish, "science_title") => "🧪 Trivia de Ciencia y Naturaleza",
-
-        (Language::English, "correct_feedback") => "✨ Correct! Great job.",
-        (Language::Spanish, "correct_feedback") => "✨ ¡Correcto! Buen trabajo.",
-
-        (Language::English, "incorrect_feedback") => "❌ Incorrect. Try again!",
-        (Language::Spanish, "incorrect_feedback") => "❌ Incorrecto. ¡Inténtalo de nuevo!",
-
-        (Language::English, "min_time_remaining") => "Complete questions & wait for minimum timer to finish.",
-        (Language::Spanish, "min_time_remaining") => "Completa las preguntas y espera a que finalice el tiempo mínimo.",
-
-        // Reset Dialog
-        (Language::English, "reset_dialog_title") => "Reset Timer Confirmation",
-        (Language::Spanish, "reset_dialog_title") => "Confirmación de Reinicio de Temporizador",
-
-        (Language::English, "reset_dialog_text") => "Enter password to reset the play timer back to zero:",
-        (Language::Spanish, "reset_dialog_text") => "Ingrese la contraseña para reiniciar el temporizador de juego:",
-
-        // Fallback
-        (_, _) => key,
+        // Fallback to source English text if not translated
+        _ => text,
     }
 }
 
@@ -779,5 +737,48 @@ pub fn get_science_question_pool(lang: Language, difficulty: crate::config::Scie
                 explanation: "💡 ¿Sabías que? La energía solo se transforma, por ejemplo de energía química a calor.",
             },
         ],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_language_names() {
+        assert_eq!(Language::English.name(), "English");
+        assert_eq!(Language::Spanish.name(), "Spanish");
+    }
+
+    #[test]
+    fn test_tr_english_passthrough() {
+        assert_eq!(
+            tr(Language::English, "Interrupt Screen Time Manager"),
+            "Interrupt Screen Time Manager"
+        );
+        assert_eq!(tr(Language::English, "🔒 Lock Now"), "🔒 Lock Now");
+        assert_eq!(tr(Language::English, "Unmapped Test Key"), "Unmapped Test Key");
+    }
+
+    #[test]
+    fn test_tr_spanish_translation() {
+        assert_eq!(
+            tr(Language::Spanish, "Interrupt Screen Time Manager"),
+            "Interrupt - Control de Pausas de Pantalla"
+        );
+        assert_eq!(tr(Language::Spanish, "🔒 Lock Now"), "🔒 Bloquear Ahora");
+        assert_eq!(tr(Language::Spanish, "⚙️ Settings"), "⚙️ Configuración");
+        assert_eq!(
+            tr(Language::Spanish, "Reset Timer Confirmation"),
+            "Confirmación de Reinicio de Temporizador"
+        );
+    }
+
+    #[test]
+    fn test_tr_spanish_unmapped_fallback() {
+        assert_eq!(
+            tr(Language::Spanish, "Unmapped Custom Text"),
+            "Unmapped Custom Text"
+        );
     }
 }
