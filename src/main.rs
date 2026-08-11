@@ -62,6 +62,7 @@ pub struct InterruptApp {
     geography_solved_count: u32,
     geography_feedback: Option<String>,
     geography_feedback_color: egui::Color32,
+    geography_question_index: usize,
 
     // Vocab & Spelling exercises screensaver state
     vocab_question_text: String,
@@ -70,6 +71,7 @@ pub struct InterruptApp {
     vocab_solved_count: u32,
     vocab_feedback: Option<String>,
     vocab_feedback_color: egui::Color32,
+    vocab_question_index: usize,
 
     // Science & Nature exercises screensaver state
     science_question_text: String,
@@ -79,6 +81,7 @@ pub struct InterruptApp {
     science_solved_count: u32,
     science_feedback: Option<String>,
     science_feedback_color: egui::Color32,
+    science_question_index: usize,
 
     active_settings_tab: usize,
     new_language: Language,
@@ -189,12 +192,14 @@ impl InterruptApp {
             geography_solved_count: 0,
             geography_feedback: None,
             geography_feedback_color: egui::Color32::LIGHT_GRAY,
+            geography_question_index: 0,
             vocab_question_text: String::new(),
             vocab_choices: Vec::new(),
             vocab_correct_idx: 0,
             vocab_solved_count: 0,
             vocab_feedback: None,
             vocab_feedback_color: egui::Color32::LIGHT_GRAY,
+            vocab_question_index: 0,
             science_question_text: String::new(),
             science_choices: Vec::new(),
             science_correct_idx: 0,
@@ -202,6 +207,7 @@ impl InterruptApp {
             science_solved_count: 0,
             science_feedback: None,
             science_feedback_color: egui::Color32::LIGHT_GRAY,
+            science_question_index: 0,
             active_settings_tab: 0,
             new_language,
             new_math_questions_needed,
@@ -360,7 +366,8 @@ impl InterruptApp {
             return;
         }
 
-        let idx = (ticks as usize) % pool.len();
+        self.geography_question_index = self.geography_question_index.wrapping_add(1);
+        let idx = (self.geography_question_index + (ticks / 1000) as usize) % pool.len();
         let item = &pool[idx];
 
         let mut choices = vec![
@@ -388,7 +395,8 @@ impl InterruptApp {
             return;
         }
 
-        let idx = (ticks as usize) % pool.len();
+        self.vocab_question_index = self.vocab_question_index.wrapping_add(1);
+        let idx = (self.vocab_question_index + (ticks / 1000) as usize) % pool.len();
         let item = &pool[idx];
 
         let mut choices = vec![
@@ -416,7 +424,8 @@ impl InterruptApp {
             return;
         }
 
-        let idx = (ticks as usize) % pool.len();
+        self.science_question_index = self.science_question_index.wrapping_add(1);
+        let idx = (self.science_question_index + (ticks / 1000) as usize) % pool.len();
         let item = &pool[idx];
 
         let mut choices = vec![
@@ -1125,7 +1134,7 @@ impl InterruptApp {
                                 ui.set_max_width(460.0);
                                 ui.vertical_centered(|ui| {
                                     ui.label(
-                                        egui::RichText::new(tr(self.settings.language, "vocab_title"))
+                                        egui::RichText::new(tr(self.settings.language, "📚 Vocabulary & Spelling Quiz"))
                                             .size(24.0)
                                             .strong()
                                             .color(egui::Color32::from_rgb(251, 146, 60)),
@@ -1224,16 +1233,16 @@ impl InterruptApp {
                                                     if elapsed_sec >= min_dur_sec as u64 {
                                                         self.transition_to_play(ctx, "solved vocab exercises");
                                                     } else {
-                                                        self.vocab_feedback = Some("Correct! All questions solved! Waiting for break duration...".to_string());
+                                                        self.vocab_feedback = Some(tr(self.settings.language, "Correct! All questions solved! Waiting for break duration...").to_string());
                                                         self.vocab_feedback_color = egui::Color32::from_rgb(52, 211, 153);
                                                     }
                                                 } else {
-                                                    self.vocab_feedback = Some(tr(self.settings.language, "correct_feedback").to_string());
+                                                    self.vocab_feedback = Some(tr(self.settings.language, "Correct! Excellent job! Next question...").to_string());
                                                     self.vocab_feedback_color = egui::Color32::from_rgb(52, 211, 153);
                                                     self.generate_vocab_problem();
                                                 }
                                             } else {
-                                                self.vocab_feedback = Some(tr(self.settings.language, "incorrect_feedback").to_string());
+                                                self.vocab_feedback = Some(tr(self.settings.language, "Incorrect choice, try again!").to_string());
                                                 self.vocab_feedback_color = egui::Color32::from_rgb(248, 113, 113);
                                             }
                                         }
@@ -1250,7 +1259,7 @@ impl InterruptApp {
 
                                     if !self.show_pause_unblock_panel {
                                         ui.add_space(12.0);
-                                        if ui.link("🔑 Use Administrator Password").clicked() {
+                                        if ui.link(tr(self.settings.language, "🔑 Use Administrator Password")).clicked() {
                                             self.show_pause_unblock_panel = true;
                                             self.focus_password_field = true;
                                         }
@@ -1270,7 +1279,7 @@ impl InterruptApp {
                                 ui.set_max_width(480.0);
                                 ui.vertical_centered(|ui| {
                                     ui.label(
-                                        egui::RichText::new(tr(self.settings.language, "science_title"))
+                                        egui::RichText::new(tr(self.settings.language, "🔬 STEM Science Trivia"))
                                             .size(24.0)
                                             .strong()
                                             .color(egui::Color32::from_rgb(34, 211, 238)),
@@ -1369,16 +1378,16 @@ impl InterruptApp {
                                                     if elapsed_sec >= min_dur_sec as u64 {
                                                         self.transition_to_play(ctx, "solved science exercises");
                                                     } else {
-                                                        self.science_feedback = Some("Correct! All questions solved! Waiting for break duration...".to_string());
+                                                        self.science_feedback = Some(tr(self.settings.language, "Correct! All questions solved! Waiting for break duration...").to_string());
                                                         self.science_feedback_color = egui::Color32::from_rgb(52, 211, 153);
                                                     }
                                                 } else {
-                                                    self.science_feedback = Some(tr(self.settings.language, "correct_feedback").to_string());
+                                                    self.science_feedback = Some(tr(self.settings.language, "Correct! Excellent job! Next question...").to_string());
                                                     self.science_feedback_color = egui::Color32::from_rgb(52, 211, 153);
                                                     self.generate_science_problem();
                                                 }
                                             } else {
-                                                self.science_feedback = Some(tr(self.settings.language, "incorrect_feedback").to_string());
+                                                self.science_feedback = Some(tr(self.settings.language, "Incorrect choice, try again!").to_string());
                                                 self.science_feedback_color = egui::Color32::from_rgb(248, 113, 113);
                                             }
                                         }
@@ -2212,12 +2221,14 @@ mod tests {
             geography_solved_count: 0,
             geography_feedback: None,
             geography_feedback_color: egui::Color32::LIGHT_GRAY,
+            geography_question_index: 0,
             vocab_question_text: String::new(),
             vocab_choices: Vec::new(),
             vocab_correct_idx: 0,
             vocab_solved_count: 0,
             vocab_feedback: None,
             vocab_feedback_color: egui::Color32::LIGHT_GRAY,
+            vocab_question_index: 0,
             science_question_text: String::new(),
             science_choices: Vec::new(),
             science_correct_idx: 0,
@@ -2225,6 +2236,7 @@ mod tests {
             science_solved_count: 0,
             science_feedback: None,
             science_feedback_color: egui::Color32::LIGHT_GRAY,
+            science_question_index: 0,
             active_settings_tab: 0,
             new_language: settings.language,
             new_math_questions_needed: settings.math_questions_needed,
@@ -2302,6 +2314,23 @@ mod tests {
                 assert!(!app.science_explanation.is_empty(), "Science explanation should not be empty");
             }
         }
+    }
+
+    #[test]
+    fn test_question_rotation() {
+        let settings = AppSettings::default();
+        let mut app = create_test_app(settings);
+
+        app.generate_vocab_problem();
+        let first_q = app.vocab_question_text.clone();
+
+        app.generate_vocab_problem();
+        let second_q = app.vocab_question_text.clone();
+
+        assert_ne!(
+            first_q, second_q,
+            "Consecutive calls to generate_vocab_problem should rotate questions"
+        );
     }
 }
 
