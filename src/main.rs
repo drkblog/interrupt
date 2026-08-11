@@ -1,12 +1,14 @@
 #![windows_subsystem = "windows"]
 
 mod config;
+mod i18n;
 mod screensaver;
 mod win32;
 
-use config::{AppSettings, GeographyDifficulty, MathDifficulty};
+use config::{AppSettings, GeographyDifficulty, MathDifficulty, VocabDifficulty};
 use eframe::egui;
-use screensaver::{get_background_color, render_screensaver_style, ScreensaverStyle};
+use i18n::{get_vocab_question_pool, tr, Language};
+use screensaver::{get_background_color, render_screensaver_style_localized, ScreensaverStyle};
 use std::time::{Duration, Instant};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -61,13 +63,25 @@ pub struct InterruptApp {
     geography_feedback: Option<String>,
     geography_feedback_color: egui::Color32,
 
+    // Vocab & Spelling exercises screensaver state
+    vocab_question_text: String,
+    vocab_choices: Vec<String>,
+    vocab_correct_idx: usize,
+    vocab_solved_count: u32,
+    vocab_feedback: Option<String>,
+    vocab_feedback_color: egui::Color32,
+
     active_settings_tab: usize,
+    new_language: Language,
     new_math_questions_needed: u32,
     new_math_min_pause_percent: u32,
     new_math_difficulty: MathDifficulty,
     new_geography_questions_needed: u32,
     new_geography_min_pause_percent: u32,
     new_geography_difficulty: GeographyDifficulty,
+    new_vocab_questions_needed: u32,
+    new_vocab_min_pause_percent: u32,
+    new_vocab_difficulty: VocabDifficulty,
 }
 
 impl InterruptApp {
@@ -78,12 +92,16 @@ impl InterruptApp {
         let new_warning_time_seconds = settings.warning_time_seconds;
         let new_screensaver_style = settings.screensaver_style;
         let new_enable_logging = settings.enable_logging;
+        let new_language = settings.language;
         let new_math_questions_needed = settings.math_questions_needed;
         let new_math_min_pause_percent = settings.math_min_pause_percent;
         let new_math_difficulty = settings.math_difficulty;
         let new_geography_questions_needed = settings.geography_questions_needed;
         let new_geography_min_pause_percent = settings.geography_min_pause_percent;
         let new_geography_difficulty = settings.geography_difficulty;
+        let new_vocab_questions_needed = settings.vocab_questions_needed;
+        let new_vocab_min_pause_percent = settings.vocab_min_pause_percent;
+        let new_vocab_difficulty = settings.vocab_difficulty;
 
         win32::init_logging(settings.enable_logging);
         
@@ -156,13 +174,23 @@ impl InterruptApp {
             geography_solved_count: 0,
             geography_feedback: None,
             geography_feedback_color: egui::Color32::LIGHT_GRAY,
+            vocab_question_text: String::new(),
+            vocab_choices: Vec::new(),
+            vocab_correct_idx: 0,
+            vocab_solved_count: 0,
+            vocab_feedback: None,
+            vocab_feedback_color: egui::Color32::LIGHT_GRAY,
             active_settings_tab: 0,
+            new_language,
             new_math_questions_needed,
             new_math_min_pause_percent,
             new_math_difficulty,
             new_geography_questions_needed,
             new_geography_min_pause_percent,
             new_geography_difficulty,
+            new_vocab_questions_needed,
+            new_vocab_min_pause_percent,
+            new_vocab_difficulty,
         }
     }
 
@@ -381,6 +409,34 @@ impl InterruptApp {
         self.geography_feedback = None;
     }
 
+    fn generate_vocab_problem(&mut self) {
+        let ticks = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+
+        let pool = get_vocab_question_pool(self.settings.language, self.settings.vocab_difficulty);
+        if pool.is_empty() {
+            return;
+        }
+
+        let idx = (ticks as usize) % pool.len();
+        let item = &pool[idx];
+
+        let mut choices = vec![
+            item.wrong[0].to_string(),
+            item.wrong[1].to_string(),
+            item.wrong[2].to_string(),
+        ];
+        let correct_idx = ((ticks >> 4) % 4) as usize;
+        choices.insert(correct_idx, item.correct.to_string());
+
+        self.vocab_question_text = item.prompt.to_string();
+        self.vocab_choices = choices;
+        self.vocab_correct_idx = correct_idx;
+        self.vocab_feedback = None;
+    }
+
     fn draw_circular_timer(
         &self,
         ui: &mut egui::Ui,
@@ -492,12 +548,16 @@ impl InterruptApp {
         self.new_warning_time_seconds = self.settings.warning_time_seconds;
         self.new_screensaver_style = self.settings.screensaver_style;
         self.new_enable_logging = self.settings.enable_logging;
+        self.new_language = self.settings.language;
         self.new_math_questions_needed = self.settings.math_questions_needed;
         self.new_math_min_pause_percent = self.settings.math_min_pause_percent;
         self.new_math_difficulty = self.settings.math_difficulty;
         self.new_geography_questions_needed = self.settings.geography_questions_needed;
         self.new_geography_min_pause_percent = self.settings.geography_min_pause_percent;
         self.new_geography_difficulty = self.settings.geography_difficulty;
+        self.new_vocab_questions_needed = self.settings.vocab_questions_needed;
+        self.new_vocab_min_pause_percent = self.settings.vocab_min_pause_percent;
+        self.new_vocab_difficulty = self.settings.vocab_difficulty;
         self.active_settings_tab = 0;
     }
 
@@ -563,6 +623,13 @@ impl InterruptApp {
                     if elapsed.as_secs() >= min_dur_sec as u64 {
                         self.transition_to_play(ctx, "geography exercises complete & min duration met");
                     }
+                } else if self.settings.screensaver_style == ScreensaverStyle::Vocab
+                    && self.vocab_solved_count >= self.settings.vocab_questions_needed
+                {
+                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.vocab_min_pause_percent) / 100;
+                    if elapsed.as_secs() >= min_dur_sec as u64 {
+                        self.transition_to_play(ctx, "vocab exercises complete & min duration met");
+                    }
                 }
             }
         }
@@ -579,6 +646,18 @@ impl InterruptApp {
         self.show_pause_unblock_panel = false;
         self.focus_password_field = false;
         self.last_pause_interaction = None;
+
+        self.math_solved_count = 0;
+        self.math_feedback = None;
+        self.generate_math_problem();
+
+        self.geography_solved_count = 0;
+        self.geography_feedback = None;
+        self.generate_geography_problem();
+
+        self.vocab_solved_count = 0;
+        self.vocab_feedback = None;
+        self.generate_vocab_problem();
 
         self.math_solved_count = 0;
         self.math_feedback = None;
@@ -702,7 +781,11 @@ impl InterruptApp {
 
             if is_interacting {
                 self.last_pause_interaction = Some(Instant::now());
-                if self.settings.screensaver_style != ScreensaverStyle::Math && self.settings.screensaver_style != ScreensaverStyle::Geography && !self.show_pause_unblock_panel {
+                if self.settings.screensaver_style != ScreensaverStyle::Math
+                    && self.settings.screensaver_style != ScreensaverStyle::Geography
+                    && self.settings.screensaver_style != ScreensaverStyle::Vocab
+                    && !self.show_pause_unblock_panel
+                {
                     self.show_pause_unblock_panel = true;
                     self.focus_password_field = true;
                 }
@@ -734,10 +817,11 @@ impl InterruptApp {
                     ui.add_space(available_height * 0.14);
 
                     // Render modular visual screensaver component
-                    render_screensaver_style(
+                    render_screensaver_style_localized(
                         self.settings.screensaver_style,
                         ui,
                         remaining_sec,
+                        self.settings.language,
                     );
 
                     if self.settings.screensaver_style == ScreensaverStyle::Math {
@@ -1024,6 +1108,151 @@ impl InterruptApp {
                             });
                     }
 
+                    if self.settings.screensaver_style == ScreensaverStyle::Vocab {
+                        ui.add_space(20.0);
+                        egui::Frame::none()
+                            .fill(egui::Color32::from_rgba_unmultiplied(15, 23, 42, 220))
+                            .rounding(16.0)
+                            .stroke(egui::Stroke::new(1.5, egui::Color32::from_rgba_unmultiplied(251, 146, 60, 100)))
+                            .inner_margin(egui::Margin::same(24.0))
+                            .show(ui, |ui| {
+                                ui.set_max_width(460.0);
+                                ui.vertical_centered(|ui| {
+                                    ui.label(
+                                        egui::RichText::new(tr(self.settings.language, "vocab_title"))
+                                            .size(24.0)
+                                            .strong()
+                                            .color(egui::Color32::from_rgb(251, 146, 60)),
+                                    );
+                                    ui.add_space(4.0);
+                                    
+                                    let total_needed = self.settings.vocab_questions_needed;
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Answer {} vocabulary & spelling questions to unlock early ({}/{} solved)",
+                                            total_needed,
+                                            self.vocab_solved_count,
+                                            total_needed
+                                        ))
+                                        .size(14.0)
+                                        .color(egui::Color32::LIGHT_GRAY),
+                                    );
+                                    ui.add_space(16.0);
+
+                                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.vocab_min_pause_percent) / 100;
+                                    let elapsed_sec = self.state_start.elapsed().as_secs();
+
+                                    self.draw_circular_timer(
+                                        ui,
+                                        elapsed_sec as f32,
+                                        (self.settings.pause_time_minutes * 60) as f32,
+                                        min_dur_sec as f32,
+                                    );
+                                    ui.add_space(20.0);
+
+                                    if self.vocab_solved_count >= total_needed {
+                                        ui.label(
+                                            egui::RichText::new("🎉 All questions solved!")
+                                                .size(20.0)
+                                                .strong()
+                                                .color(egui::Color32::from_rgb(52, 211, 153)),
+                                        );
+                                        ui.add_space(8.0);
+                                        ui.label(
+                                            egui::RichText::new("Break must continue to meet the minimum required off-game duration.")
+                                                .size(14.0)
+                                                .color(egui::Color32::YELLOW),
+                                        );
+                                    } else {
+                                        ui.label(
+                                            egui::RichText::new(&self.vocab_question_text)
+                                                .size(18.0)
+                                                .strong()
+                                                .color(egui::Color32::WHITE),
+                                        );
+                                        ui.add_space(16.0);
+
+                                        let mut selected_choice: Option<usize> = None;
+                                        egui::Grid::new("vocab_choices_grid")
+                                            .num_columns(2)
+                                            .spacing([12.0, 10.0])
+                                            .show(ui, |ui| {
+                                                for (idx, choice) in self.vocab_choices.iter().enumerate() {
+                                                    let btn = ui.add_sized(
+                                                        [200.0, 36.0],
+                                                        egui::Button::new(
+                                                            egui::RichText::new(format!("{}. {}", idx + 1, choice))
+                                                                .size(14.0)
+                                                                .strong()
+                                                        )
+                                                    );
+                                                    if btn.clicked() {
+                                                        selected_choice = Some(idx);
+                                                    }
+                                                    if idx % 2 == 1 {
+                                                        ui.end_row();
+                                                    }
+                                                }
+                                            });
+
+                                        if selected_choice.is_none() {
+                                            for idx in 0..self.vocab_choices.len() {
+                                                let key = match idx {
+                                                    0 => egui::Key::Num1,
+                                                    1 => egui::Key::Num2,
+                                                    2 => egui::Key::Num3,
+                                                    3 => egui::Key::Num4,
+                                                    _ => egui::Key::Num0,
+                                                };
+                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel || !self.focus_password_field) {
+                                                    selected_choice = Some(idx);
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        if let Some(idx) = selected_choice {
+                                            if idx == self.vocab_correct_idx {
+                                                self.vocab_solved_count += 1;
+                                                if self.vocab_solved_count >= total_needed {
+                                                    if elapsed_sec >= min_dur_sec as u64 {
+                                                        self.transition_to_play(ctx, "solved vocab exercises");
+                                                    } else {
+                                                        self.vocab_feedback = Some("Correct! All questions solved! Waiting for break duration...".to_string());
+                                                        self.vocab_feedback_color = egui::Color32::from_rgb(52, 211, 153);
+                                                    }
+                                                } else {
+                                                    self.vocab_feedback = Some(tr(self.settings.language, "correct_feedback").to_string());
+                                                    self.vocab_feedback_color = egui::Color32::from_rgb(52, 211, 153);
+                                                    self.generate_vocab_problem();
+                                                }
+                                            } else {
+                                                self.vocab_feedback = Some(tr(self.settings.language, "incorrect_feedback").to_string());
+                                                self.vocab_feedback_color = egui::Color32::from_rgb(248, 113, 113);
+                                            }
+                                        }
+
+                                        if let Some(ref feedback) = self.vocab_feedback {
+                                            ui.add_space(10.0);
+                                            ui.label(
+                                                egui::RichText::new(feedback)
+                                                    .size(14.0)
+                                                    .color(self.vocab_feedback_color),
+                                            );
+                                        }
+                                    }
+
+                                    if !self.show_pause_unblock_panel {
+                                        ui.add_space(12.0);
+                                        if ui.link("🔑 Use Administrator Password").clicked() {
+                                            self.show_pause_unblock_panel = true;
+                                            self.focus_password_field = true;
+                                        }
+                                    }
+                                });
+                            });
+                    }
+
                     ui.add_space(30.0);
 
                     // Password unblock panel (Only visible when user interacts)
@@ -1225,6 +1454,21 @@ impl InterruptApp {
                             .num_columns(2)
                             .spacing([16.0, 10.0])
                             .show(ui, |ui| {
+                                ui.label(tr(self.settings.language, "language_label"));
+                                egui::ComboBox::from_id_source("language_selector")
+                                    .selected_text(self.new_language.name())
+                                    .width(180.0)
+                                    .show_ui(ui, |ui| {
+                                        for lang in Language::all() {
+                                            ui.selectable_value(
+                                                &mut self.new_language,
+                                                *lang,
+                                                lang.name(),
+                                            );
+                                        }
+                                    });
+                                ui.end_row();
+
                                 ui.label("Play Time (minutes):");
                                 ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_play_time).range(1..=300));
                                 ui.end_row();
@@ -1330,6 +1574,35 @@ impl InterruptApp {
                                         ui.end_row();
                                     });
                             }
+                            ScreensaverStyle::Vocab => {
+                                egui::Grid::new("vocab_settings_grid")
+                                    .num_columns(2)
+                                    .spacing([16.0, 10.0])
+                                    .show(ui, |ui| {
+                                        ui.label("Questions to Solve:");
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_vocab_questions_needed).range(1..=20));
+                                        ui.end_row();
+
+                                        ui.label("Min Break Duration (%):");
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_vocab_min_pause_percent).range(30..=100));
+                                        ui.end_row();
+
+                                        ui.label("Difficulty:");
+                                        egui::ComboBox::from_id_source("vocab_difficulty_selector")
+                                            .selected_text(self.new_vocab_difficulty.name())
+                                            .width(180.0)
+                                            .show_ui(ui, |ui| {
+                                                for diff in VocabDifficulty::all() {
+                                                    ui.selectable_value(
+                                                        &mut self.new_vocab_difficulty,
+                                                        *diff,
+                                                        diff.name(),
+                                                    );
+                                                }
+                                            });
+                                        ui.end_row();
+                                    });
+                            }
                             _ => {
                                 ui.label(egui::RichText::new("This screensaver style has no custom configuration parameters.")
                                     .color(egui::Color32::LIGHT_GRAY));
@@ -1340,18 +1613,22 @@ impl InterruptApp {
                     ui.add_space(20.0);
 
                     ui.horizontal(|ui| {
-                        if ui.button("💾 Save Settings").clicked() {
+                        if ui.button(tr(self.settings.language, "save_settings")).clicked() {
                             self.settings.play_time_minutes = self.new_play_time;
                             self.settings.pause_time_minutes = self.new_pause_time;
                             self.settings.warning_time_seconds = self.new_warning_time_seconds;
                             self.settings.screensaver_style = self.new_screensaver_style;
                             self.settings.enable_logging = self.new_enable_logging;
+                            self.settings.language = self.new_language;
                             self.settings.math_questions_needed = self.new_math_questions_needed;
                             self.settings.math_min_pause_percent = self.new_math_min_pause_percent;
                             self.settings.math_difficulty = self.new_math_difficulty;
                             self.settings.geography_questions_needed = self.new_geography_questions_needed;
                             self.settings.geography_min_pause_percent = self.new_geography_min_pause_percent;
                             self.settings.geography_difficulty = self.new_geography_difficulty;
+                            self.settings.vocab_questions_needed = self.new_vocab_questions_needed;
+                            self.settings.vocab_min_pause_percent = self.new_vocab_min_pause_percent;
+                            self.settings.vocab_difficulty = self.new_vocab_difficulty;
                             win32::init_logging(self.new_enable_logging);
                             if !self.new_password_input.trim().is_empty() {
                                 self.settings.set_password(&self.new_password_input);
@@ -1361,7 +1638,7 @@ impl InterruptApp {
                                 self.settings_message = Some(format!("Failed to save: {}", e));
                             } else {
                                 self.settings_message =
-                                    Some("Settings saved successfully!".to_string());
+                                    Some(tr(self.settings.language, "settings_saved").to_string());
                                 self.close_settings();
                             }
                         }
@@ -1672,12 +1949,11 @@ fn main() -> eframe::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use config::GeographyDifficulty;
+    use config::{GeographyDifficulty, VocabDifficulty};
+    use i18n::Language;
 
-    #[test]
-    fn test_geography_problem_flag_generation() {
-        let settings = AppSettings::default();
-        let mut app = InterruptApp {
+    fn create_test_app(settings: AppSettings) -> InterruptApp {
+        InterruptApp {
             settings: settings.clone(),
             state: AppState::Play,
             state_start: Instant::now(),
@@ -1715,14 +1991,30 @@ mod tests {
             geography_solved_count: 0,
             geography_feedback: None,
             geography_feedback_color: egui::Color32::LIGHT_GRAY,
+            vocab_question_text: String::new(),
+            vocab_choices: Vec::new(),
+            vocab_correct_idx: 0,
+            vocab_solved_count: 0,
+            vocab_feedback: None,
+            vocab_feedback_color: egui::Color32::LIGHT_GRAY,
             active_settings_tab: 0,
+            new_language: settings.language,
             new_math_questions_needed: settings.math_questions_needed,
             new_math_min_pause_percent: settings.math_min_pause_percent,
             new_math_difficulty: settings.math_difficulty,
             new_geography_questions_needed: settings.geography_questions_needed,
             new_geography_min_pause_percent: settings.geography_min_pause_percent,
             new_geography_difficulty: settings.geography_difficulty,
-        };
+            new_vocab_questions_needed: settings.vocab_questions_needed,
+            new_vocab_min_pause_percent: settings.vocab_min_pause_percent,
+            new_vocab_difficulty: settings.vocab_difficulty,
+        }
+    }
+
+    #[test]
+    fn test_geography_problem_flag_generation() {
+        let settings = AppSettings::default();
+        let mut app = create_test_app(settings);
 
         for difficulty in &[GeographyDifficulty::Low, GeographyDifficulty::Medium, GeographyDifficulty::High] {
             app.settings.geography_difficulty = *difficulty;
@@ -1743,6 +2035,24 @@ mod tests {
                 "Geography problem for difficulty {:?} should incorporate flag indicators/emojis in prompt or choices",
                 difficulty
             );
+        }
+    }
+
+    #[test]
+    fn test_vocab_problem_generation_multilingual() {
+        let settings = AppSettings::default();
+        let mut app = create_test_app(settings);
+
+        for lang in &[Language::English, Language::Spanish] {
+            app.settings.language = *lang;
+            for difficulty in &[VocabDifficulty::Low, VocabDifficulty::Medium, VocabDifficulty::High] {
+                app.settings.vocab_difficulty = *difficulty;
+                app.generate_vocab_problem();
+
+                assert!(!app.vocab_question_text.is_empty(), "Vocab question text should not be empty");
+                assert_eq!(app.vocab_choices.len(), 4, "Vocab problem should have exactly 4 choices");
+                assert!(app.vocab_correct_idx < 4, "Correct index should be within choices bounds");
+            }
         }
     }
 }

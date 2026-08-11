@@ -1,3 +1,4 @@
+use crate::i18n::Language;
 use crate::screensaver::ScreensaverStyle;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -88,6 +89,45 @@ fn default_geography_difficulty() -> GeographyDifficulty {
     GeographyDifficulty::Medium
 }
 
+fn default_vocab_questions_needed() -> u32 {
+    3
+}
+
+fn default_vocab_min_pause_percent() -> u32 {
+    50
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum VocabDifficulty {
+    Low,
+    Medium,
+    High,
+}
+
+impl Default for VocabDifficulty {
+    fn default() -> Self {
+        VocabDifficulty::Medium
+    }
+}
+
+impl VocabDifficulty {
+    pub fn all() -> &'static [VocabDifficulty] {
+        &[VocabDifficulty::Low, VocabDifficulty::Medium, VocabDifficulty::High]
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            VocabDifficulty::Low => "Low (Early Elementary / Primaria Inicial)",
+            VocabDifficulty::Medium => "Medium (Upper Elementary / Primaria Superior)",
+            VocabDifficulty::High => "High (Middle School / Secundaria)",
+        }
+    }
+}
+
+fn default_vocab_difficulty() -> VocabDifficulty {
+    VocabDifficulty::Medium
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub play_time_minutes: u32,
@@ -99,6 +139,8 @@ pub struct AppSettings {
     pub password_hash: String,
     #[serde(default)]
     pub enable_logging: bool,
+    #[serde(default)]
+    pub language: Language,
     #[serde(default = "default_math_questions_needed")]
     pub math_questions_needed: u32,
     #[serde(default = "default_math_min_pause_percent")]
@@ -111,6 +153,12 @@ pub struct AppSettings {
     pub geography_min_pause_percent: u32,
     #[serde(default = "default_geography_difficulty")]
     pub geography_difficulty: GeographyDifficulty,
+    #[serde(default = "default_vocab_questions_needed")]
+    pub vocab_questions_needed: u32,
+    #[serde(default = "default_vocab_min_pause_percent")]
+    pub vocab_min_pause_percent: u32,
+    #[serde(default = "default_vocab_difficulty")]
+    pub vocab_difficulty: VocabDifficulty,
 }
 
 impl Default for AppSettings {
@@ -122,12 +170,16 @@ impl Default for AppSettings {
             screensaver_style: ScreensaverStyle::Default,
             password_hash: hash_password("1234"),
             enable_logging: false,
+            language: Language::English,
             math_questions_needed: 3,
             math_min_pause_percent: 50,
             math_difficulty: MathDifficulty::Medium,
             geography_questions_needed: 3,
             geography_min_pause_percent: 50,
             geography_difficulty: GeographyDifficulty::Medium,
+            vocab_questions_needed: 3,
+            vocab_min_pause_percent: 50,
+            vocab_difficulty: VocabDifficulty::Medium,
         }
     }
 }
@@ -140,6 +192,7 @@ impl AppSettings {
                     if let Ok(mut settings) = serde_json::from_str::<AppSettings>(&content) {
                         settings.math_min_pause_percent = settings.math_min_pause_percent.clamp(30, 100);
                         settings.geography_min_pause_percent = settings.geography_min_pause_percent.clamp(30, 100);
+                        settings.vocab_min_pause_percent = settings.vocab_min_pause_percent.clamp(30, 100);
                         return settings;
                     }
                 }
@@ -234,16 +287,26 @@ mod tests {
     }
 
     #[test]
+    fn test_vocab_difficulty_default() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.vocab_difficulty, VocabDifficulty::Medium);
+        assert_eq!(settings.language, Language::English);
+    }
+
+    #[test]
     fn test_min_pause_percent_defaults_and_clamping() {
         let settings = AppSettings::default();
         assert_eq!(settings.math_min_pause_percent, 50);
         assert_eq!(settings.geography_min_pause_percent, 50);
+        assert_eq!(settings.vocab_min_pause_percent, 50);
 
-        let json = r#"{"play_time_minutes":30,"pause_time_minutes":5,"password_hash":"1234","math_min_pause_percent":10,"geography_min_pause_percent":5}"#;
+        let json = r#"{"play_time_minutes":30,"pause_time_minutes":5,"password_hash":"1234","math_min_pause_percent":10,"geography_min_pause_percent":5,"vocab_min_pause_percent":2}"#;
         let mut loaded: AppSettings = serde_json::from_str(json).unwrap();
         loaded.math_min_pause_percent = loaded.math_min_pause_percent.clamp(30, 100);
         loaded.geography_min_pause_percent = loaded.geography_min_pause_percent.clamp(30, 100);
+        loaded.vocab_min_pause_percent = loaded.vocab_min_pause_percent.clamp(30, 100);
         assert_eq!(loaded.math_min_pause_percent, 30);
         assert_eq!(loaded.geography_min_pause_percent, 30);
+        assert_eq!(loaded.vocab_min_pause_percent, 30);
     }
 }

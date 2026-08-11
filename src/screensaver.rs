@@ -1,3 +1,4 @@
+use crate::i18n::{tr, Language};
 use eframe::egui;
 use serde::{Deserialize, Serialize};
 
@@ -8,6 +9,7 @@ pub enum ScreensaverStyle {
     Matrix,
     Math,
     Geography,
+    Vocab,
 }
 
 impl Default for ScreensaverStyle {
@@ -24,6 +26,7 @@ impl ScreensaverStyle {
             ScreensaverStyle::Matrix,
             ScreensaverStyle::Math,
             ScreensaverStyle::Geography,
+            ScreensaverStyle::Vocab,
         ]
     }
 
@@ -34,6 +37,7 @@ impl ScreensaverStyle {
             ScreensaverStyle::Matrix => "Matrix (Digital Green Rain)",
             ScreensaverStyle::Math => "Math Exercises (Elementary Arithmetic)",
             ScreensaverStyle::Geography => "Geography & Flags (World Trivia)",
+            ScreensaverStyle::Vocab => "Vocab & Spelling (Word Quiz)",
         }
     }
 }
@@ -45,7 +49,17 @@ pub trait ScreensaverComponent {
 }
 
 // 1. Default Screensaver Component (Breathing Aurora & Floating Orbs)
-pub struct DefaultScreensaver;
+pub struct DefaultScreensaver {
+    pub lang: Language,
+}
+
+impl Default for DefaultScreensaver {
+    fn default() -> Self {
+        Self {
+            lang: Language::English,
+        }
+    }
+}
 
 impl ScreensaverComponent for DefaultScreensaver {
     fn render_visuals(&mut self, ui: &mut egui::Ui, remaining_sec: u64) {
@@ -96,11 +110,11 @@ impl ScreensaverComponent for DefaultScreensaver {
         let cycle_period = 11.0;
         let cycle_time = (time % cycle_period) as f32;
         let (breath_label, breath_color) = if cycle_time < 3.0 {
-            ("🫁 Inhale deeply...", egui::Color32::from_rgb(56, 189, 248))
+            (tr(self.lang, "aurora_inhale"), egui::Color32::from_rgb(56, 189, 248))
         } else if cycle_time < 5.0 {
-            ("⏸️ Hold...", egui::Color32::from_rgb(168, 85, 247))
+            (tr(self.lang, "aurora_hold"), egui::Color32::from_rgb(168, 85, 247))
         } else {
-            ("😮‍💨 Exhale slowly...", egui::Color32::from_rgb(52, 211, 153))
+            (tr(self.lang, "aurora_exhale"), egui::Color32::from_rgb(52, 211, 153))
         };
 
         // 3. Central Relaxation Glass Card
@@ -118,7 +132,7 @@ impl ScreensaverComponent for DefaultScreensaver {
                 .show(ui, |ui| {
                     ui.set_max_width(max_card_width);
                     ui.heading(
-                        egui::RichText::new("🌿 TIME TO TAKE A BREAK")
+                        egui::RichText::new(tr(self.lang, "aurora_heading"))
                             .size(36.0)
                             .color(egui::Color32::from_rgb(56, 189, 248))
                             .strong(),
@@ -126,7 +140,7 @@ impl ScreensaverComponent for DefaultScreensaver {
 
                     ui.add_space(12.0);
                     ui.label(
-                        egui::RichText::new("Step away, stretch, drink water, and rest your eyes.")
+                        egui::RichText::new(tr(self.lang, "aurora_subtext"))
                             .size(18.0)
                             .color(egui::Color32::from_rgb(203, 213, 225)),
                     );
@@ -161,13 +175,23 @@ impl ScreensaverComponent for DefaultScreensaver {
 }
 
 // 2. Minimalist Screensaver Component
-pub struct MinimalistScreensaver;
+pub struct MinimalistScreensaver {
+    pub lang: Language,
+}
+
+impl Default for MinimalistScreensaver {
+    fn default() -> Self {
+        Self {
+            lang: Language::English,
+        }
+    }
+}
 
 impl ScreensaverComponent for MinimalistScreensaver {
     fn render_visuals(&mut self, ui: &mut egui::Ui, remaining_sec: u64) {
         ui.vertical_centered(|ui| {
             ui.heading(
-                egui::RichText::new("PAUSE")
+                egui::RichText::new(tr(self.lang, "minimalist_heading"))
                     .size(36.0)
                     .color(egui::Color32::from_rgb(160, 160, 160))
                     .strong(),
@@ -188,7 +212,7 @@ impl ScreensaverComponent for MinimalistScreensaver {
 
             ui.add_space(12.0);
             ui.label(
-                egui::RichText::new("Resting computer screen...")
+                egui::RichText::new(tr(self.lang, "minimalist_subtext"))
                     .size(16.0)
                     .color(egui::Color32::GRAY),
             );
@@ -197,7 +221,17 @@ impl ScreensaverComponent for MinimalistScreensaver {
 }
 
 // 3. Matrix Digital Rain Screensaver Component (Full Screen Bounds)
-pub struct MatrixScreensaver;
+pub struct MatrixScreensaver {
+    pub lang: Language,
+}
+
+impl Default for MatrixScreensaver {
+    fn default() -> Self {
+        Self {
+            lang: Language::English,
+        }
+    }
+}
 
 impl ScreensaverComponent for MatrixScreensaver {
     fn render_visuals(&mut self, ui: &mut egui::Ui, remaining_sec: u64) {
@@ -285,7 +319,7 @@ impl ScreensaverComponent for MatrixScreensaver {
                 .show(ui, |ui| {
                     ui.set_max_width(max_card_width);
                     ui.heading(
-                        egui::RichText::new("SYSTEM PAUSED // SCREEN BREAK")
+                        egui::RichText::new(tr(self.lang, "matrix_heading"))
                             .size(30.0)
                             .color(egui::Color32::from_rgb(34, 197, 94))
                             .monospace()
@@ -316,7 +350,7 @@ impl ScreensaverComponent for MatrixScreensaver {
 
                     ui.add_space(14.0);
                     ui.label(
-                        egui::RichText::new("> Stand up and stretch before returning to console.")
+                        egui::RichText::new(tr(self.lang, "matrix_subtext"))
                             .size(16.0)
                             .color(egui::Color32::from_rgb(134, 239, 172))
                             .monospace(),
@@ -365,7 +399,17 @@ impl ScreensaverComponent for MathScreensaver {
 }
 
 // 5. Geography Screensaver Component (World Grid & Floating Icons)
-pub struct GeographyScreensaver;
+pub struct GeographyScreensaver {
+    pub lang: Language,
+}
+
+impl Default for GeographyScreensaver {
+    fn default() -> Self {
+        Self {
+            lang: Language::English,
+        }
+    }
+}
 
 impl ScreensaverComponent for GeographyScreensaver {
     fn render_visuals(&mut self, ui: &mut egui::Ui, _remaining_sec: u64) {
@@ -408,28 +452,110 @@ impl ScreensaverComponent for GeographyScreensaver {
             );
         }
 
+        let title = match self.lang {
+            Language::English => "🌍 World Geography & Flags",
+            Language::Spanish => "🌍 Geografía y Banderas del Mundo",
+        };
+
         painter.text(
             screen_rect.center() - egui::vec2(0.0, 200.0),
             egui::Align2::CENTER_CENTER,
-            "🌍 World Geography & Flags",
+            title,
             egui::FontId::proportional(30.0),
             egui::Color32::from_rgb(56, 189, 248),
         );
     }
 }
 
+// 6. Vocabulary & Spelling Screensaver Component (Floating Letters & Books)
+pub struct VocabScreensaver {
+    pub lang: Language,
+}
+
+impl Default for VocabScreensaver {
+    fn default() -> Self {
+        Self {
+            lang: Language::English,
+        }
+    }
+}
+
+impl ScreensaverComponent for VocabScreensaver {
+    fn render_visuals(&mut self, ui: &mut egui::Ui, _remaining_sec: u64) {
+        let screen_rect = ui.ctx().screen_rect();
+        let time = ui.input(|i| i.time);
+        let painter = ui.painter();
+
+        let symbols = [
+            "📚", "✏️", "📖", "📝", "🔤", "A", "B", "C", "D", "E", "F", "G",
+            "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+        ];
+        let num_elements = 24;
+
+        for i in 0..num_elements {
+            let seed = (i * 41 + 17) as f64;
+            let size = 18.0 + (seed % 16.0) as f32;
+            let x_base = screen_rect.min.x + ((seed * 83.0) as f32 % screen_rect.width());
+            let x_sway = (time * 0.5 + seed).sin() as f32 * 25.0;
+            let x = x_base + x_sway;
+
+            let loop_height = screen_rect.height() + 80.0;
+            let speed = 16.0 + (seed % 22.0) as f32;
+            let y = screen_rect.max.y - ((time as f32 * speed + (seed * 53.0) as f32) % loop_height);
+
+            let alpha = ((time * 0.7 + seed).sin() * 0.2 + 0.35) as f32;
+            let color = egui::Color32::from_rgba_unmultiplied(
+                251,
+                146,
+                60,
+                (255.0 * alpha) as u8,
+            );
+
+            let symbol = symbols[i % symbols.len()];
+            painter.text(
+                egui::pos2(x, y),
+                egui::Align2::CENTER_CENTER,
+                symbol,
+                egui::FontId::proportional(size),
+                color,
+            );
+        }
+
+        let title = tr(self.lang, "vocab_title");
+
+        painter.text(
+            screen_rect.center() - egui::vec2(0.0, 200.0),
+            egui::Align2::CENTER_CENTER,
+            title,
+            egui::FontId::proportional(30.0),
+            egui::Color32::from_rgb(251, 146, 60),
+        );
+    }
+}
+
 /// Renders the visual content of the selected screensaver style.
+#[allow(dead_code)]
 pub fn render_screensaver_style(
     style: ScreensaverStyle,
     ui: &mut egui::Ui,
     remaining_sec: u64,
 ) {
+    render_screensaver_style_localized(style, ui, remaining_sec, Language::English);
+}
+
+pub fn render_screensaver_style_localized(
+    style: ScreensaverStyle,
+    ui: &mut egui::Ui,
+    remaining_sec: u64,
+    lang: Language,
+) {
     match style {
-        ScreensaverStyle::Default => DefaultScreensaver.render_visuals(ui, remaining_sec),
-        ScreensaverStyle::Minimalist => MinimalistScreensaver.render_visuals(ui, remaining_sec),
-        ScreensaverStyle::Matrix => MatrixScreensaver.render_visuals(ui, remaining_sec),
+        ScreensaverStyle::Default => DefaultScreensaver { lang }.render_visuals(ui, remaining_sec),
+        ScreensaverStyle::Minimalist => MinimalistScreensaver { lang }.render_visuals(ui, remaining_sec),
+        ScreensaverStyle::Matrix => MatrixScreensaver { lang }.render_visuals(ui, remaining_sec),
         ScreensaverStyle::Math => MathScreensaver.render_visuals(ui, remaining_sec),
-        ScreensaverStyle::Geography => GeographyScreensaver.render_visuals(ui, remaining_sec),
+        ScreensaverStyle::Geography => GeographyScreensaver { lang }.render_visuals(ui, remaining_sec),
+        ScreensaverStyle::Vocab => VocabScreensaver { lang }.render_visuals(ui, remaining_sec),
     }
 }
 
@@ -440,5 +566,7 @@ pub fn get_background_color(style: ScreensaverStyle) -> egui::Color32 {
         ScreensaverStyle::Matrix => egui::Color32::from_rgb(2, 8, 2),
         ScreensaverStyle::Math => egui::Color32::from_rgb(17, 24, 39), // Slate 900
         ScreensaverStyle::Geography => egui::Color32::from_rgb(13, 27, 42), // Deep Ocean Navy
+        ScreensaverStyle::Vocab => egui::Color32::from_rgb(24, 18, 43), // Deep Amber/Purple Velvet
     }
 }
+
