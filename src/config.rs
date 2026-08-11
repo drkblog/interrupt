@@ -128,6 +128,45 @@ fn default_vocab_difficulty() -> VocabDifficulty {
     VocabDifficulty::Medium
 }
 
+fn default_science_questions_needed() -> u32 {
+    3
+}
+
+fn default_science_min_pause_percent() -> u32 {
+    50
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ScienceDifficulty {
+    Low,
+    Medium,
+    High,
+}
+
+impl Default for ScienceDifficulty {
+    fn default() -> Self {
+        ScienceDifficulty::Medium
+    }
+}
+
+impl ScienceDifficulty {
+    pub fn all() -> &'static [ScienceDifficulty] {
+        &[ScienceDifficulty::Low, ScienceDifficulty::Medium, ScienceDifficulty::High]
+    }
+
+    pub fn name(&self) -> &'static str {
+        match self {
+            ScienceDifficulty::Low => "Low (Basic Science & Nature)",
+            ScienceDifficulty::Medium => "Medium (Intermediate STEM & Space)",
+            ScienceDifficulty::High => "High (Advanced Physics & Biology)",
+        }
+    }
+}
+
+fn default_science_difficulty() -> ScienceDifficulty {
+    ScienceDifficulty::Medium
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub play_time_minutes: u32,
@@ -159,6 +198,12 @@ pub struct AppSettings {
     pub vocab_min_pause_percent: u32,
     #[serde(default = "default_vocab_difficulty")]
     pub vocab_difficulty: VocabDifficulty,
+    #[serde(default = "default_science_questions_needed")]
+    pub science_questions_needed: u32,
+    #[serde(default = "default_science_min_pause_percent")]
+    pub science_min_pause_percent: u32,
+    #[serde(default = "default_science_difficulty")]
+    pub science_difficulty: ScienceDifficulty,
 }
 
 impl Default for AppSettings {
@@ -180,6 +225,9 @@ impl Default for AppSettings {
             vocab_questions_needed: 3,
             vocab_min_pause_percent: 50,
             vocab_difficulty: VocabDifficulty::Medium,
+            science_questions_needed: 3,
+            science_min_pause_percent: 50,
+            science_difficulty: ScienceDifficulty::Medium,
         }
     }
 }
@@ -193,6 +241,7 @@ impl AppSettings {
                         settings.math_min_pause_percent = settings.math_min_pause_percent.clamp(30, 100);
                         settings.geography_min_pause_percent = settings.geography_min_pause_percent.clamp(30, 100);
                         settings.vocab_min_pause_percent = settings.vocab_min_pause_percent.clamp(30, 100);
+                        settings.science_min_pause_percent = settings.science_min_pause_percent.clamp(30, 100);
                         return settings;
                     }
                 }
@@ -290,6 +339,7 @@ mod tests {
     fn test_vocab_difficulty_default() {
         let settings = AppSettings::default();
         assert_eq!(settings.vocab_difficulty, VocabDifficulty::Medium);
+        assert_eq!(settings.science_difficulty, ScienceDifficulty::Medium);
         assert_eq!(settings.language, Language::English);
     }
 
@@ -299,14 +349,17 @@ mod tests {
         assert_eq!(settings.math_min_pause_percent, 50);
         assert_eq!(settings.geography_min_pause_percent, 50);
         assert_eq!(settings.vocab_min_pause_percent, 50);
+        assert_eq!(settings.science_min_pause_percent, 50);
 
-        let json = r#"{"play_time_minutes":30,"pause_time_minutes":5,"password_hash":"1234","math_min_pause_percent":10,"geography_min_pause_percent":5,"vocab_min_pause_percent":2}"#;
+        let json = r#"{"play_time_minutes":30,"pause_time_minutes":5,"password_hash":"1234","math_min_pause_percent":10,"geography_min_pause_percent":5,"vocab_min_pause_percent":2,"science_min_pause_percent":1}"#;
         let mut loaded: AppSettings = serde_json::from_str(json).unwrap();
         loaded.math_min_pause_percent = loaded.math_min_pause_percent.clamp(30, 100);
         loaded.geography_min_pause_percent = loaded.geography_min_pause_percent.clamp(30, 100);
         loaded.vocab_min_pause_percent = loaded.vocab_min_pause_percent.clamp(30, 100);
+        loaded.science_min_pause_percent = loaded.science_min_pause_percent.clamp(30, 100);
         assert_eq!(loaded.math_min_pause_percent, 30);
         assert_eq!(loaded.geography_min_pause_percent, 30);
         assert_eq!(loaded.vocab_min_pause_percent, 30);
+        assert_eq!(loaded.science_min_pause_percent, 30);
     }
 }

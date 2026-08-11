@@ -13,7 +13,7 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
 | FT-05 | Math Lock Screen | Implemented |
 | FT-06 | Vocabulary & Spelling Quiz Lock Screen | Implemented |
 | FT-07 | Country Flags & Geography Trivia Lock Screen | Implemented |
-| FT-08 | Science & Nature Trivia Lock Screen | Proposed |
+| FT-08 | Science & Nature Trivia Lock Screen | Implemented |
 
 ---
 

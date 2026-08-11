@@ -5,9 +5,9 @@ mod i18n;
 mod screensaver;
 mod win32;
 
-use config::{AppSettings, GeographyDifficulty, MathDifficulty, VocabDifficulty};
+use config::{AppSettings, GeographyDifficulty, MathDifficulty, ScienceDifficulty, VocabDifficulty};
 use eframe::egui;
-use i18n::{get_vocab_question_pool, tr, Language};
+use i18n::{get_science_question_pool, get_vocab_question_pool, tr, Language};
 use screensaver::{get_background_color, render_screensaver_style_localized, ScreensaverStyle};
 use std::time::{Duration, Instant};
 
@@ -71,6 +71,15 @@ pub struct InterruptApp {
     vocab_feedback: Option<String>,
     vocab_feedback_color: egui::Color32,
 
+    // Science & Nature exercises screensaver state
+    science_question_text: String,
+    science_choices: Vec<String>,
+    science_correct_idx: usize,
+    science_explanation: String,
+    science_solved_count: u32,
+    science_feedback: Option<String>,
+    science_feedback_color: egui::Color32,
+
     active_settings_tab: usize,
     new_language: Language,
     new_math_questions_needed: u32,
@@ -82,6 +91,9 @@ pub struct InterruptApp {
     new_vocab_questions_needed: u32,
     new_vocab_min_pause_percent: u32,
     new_vocab_difficulty: VocabDifficulty,
+    new_science_questions_needed: u32,
+    new_science_min_pause_percent: u32,
+    new_science_difficulty: ScienceDifficulty,
 }
 
 impl InterruptApp {
@@ -102,6 +114,9 @@ impl InterruptApp {
         let new_vocab_questions_needed = settings.vocab_questions_needed;
         let new_vocab_min_pause_percent = settings.vocab_min_pause_percent;
         let new_vocab_difficulty = settings.vocab_difficulty;
+        let new_science_questions_needed = settings.science_questions_needed;
+        let new_science_min_pause_percent = settings.science_min_pause_percent;
+        let new_science_difficulty = settings.science_difficulty;
 
         win32::init_logging(settings.enable_logging);
         
@@ -180,6 +195,13 @@ impl InterruptApp {
             vocab_solved_count: 0,
             vocab_feedback: None,
             vocab_feedback_color: egui::Color32::LIGHT_GRAY,
+            science_question_text: String::new(),
+            science_choices: Vec::new(),
+            science_correct_idx: 0,
+            science_explanation: String::new(),
+            science_solved_count: 0,
+            science_feedback: None,
+            science_feedback_color: egui::Color32::LIGHT_GRAY,
             active_settings_tab: 0,
             new_language,
             new_math_questions_needed,
@@ -191,6 +213,9 @@ impl InterruptApp {
             new_vocab_questions_needed,
             new_vocab_min_pause_percent,
             new_vocab_difficulty,
+            new_science_questions_needed,
+            new_science_min_pause_percent,
+            new_science_difficulty,
         }
     }
 
@@ -437,6 +462,35 @@ impl InterruptApp {
         self.vocab_feedback = None;
     }
 
+    fn generate_science_problem(&mut self) {
+        let ticks = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+
+        let pool = get_science_question_pool(self.settings.language, self.settings.science_difficulty);
+        if pool.is_empty() {
+            return;
+        }
+
+        let idx = (ticks as usize) % pool.len();
+        let item = &pool[idx];
+
+        let mut choices = vec![
+            item.wrong[0].to_string(),
+            item.wrong[1].to_string(),
+            item.wrong[2].to_string(),
+        ];
+        let correct_idx = ((ticks >> 4) % 4) as usize;
+        choices.insert(correct_idx, item.correct.to_string());
+
+        self.science_question_text = item.prompt.to_string();
+        self.science_choices = choices;
+        self.science_correct_idx = correct_idx;
+        self.science_explanation = item.explanation.to_string();
+        self.science_feedback = None;
+    }
+
     fn draw_circular_timer(
         &self,
         ui: &mut egui::Ui,
@@ -558,6 +612,9 @@ impl InterruptApp {
         self.new_vocab_questions_needed = self.settings.vocab_questions_needed;
         self.new_vocab_min_pause_percent = self.settings.vocab_min_pause_percent;
         self.new_vocab_difficulty = self.settings.vocab_difficulty;
+        self.new_science_questions_needed = self.settings.science_questions_needed;
+        self.new_science_min_pause_percent = self.settings.science_min_pause_percent;
+        self.new_science_difficulty = self.settings.science_difficulty;
         self.active_settings_tab = 0;
     }
 
@@ -630,6 +687,13 @@ impl InterruptApp {
                     if elapsed.as_secs() >= min_dur_sec as u64 {
                         self.transition_to_play(ctx, "vocab exercises complete & min duration met");
                     }
+                } else if self.settings.screensaver_style == ScreensaverStyle::Science
+                    && self.science_solved_count >= self.settings.science_questions_needed
+                {
+                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.science_min_pause_percent) / 100;
+                    if elapsed.as_secs() >= min_dur_sec as u64 {
+                        self.transition_to_play(ctx, "science exercises complete & min duration met");
+                    }
                 }
             }
         }
@@ -659,13 +723,9 @@ impl InterruptApp {
         self.vocab_feedback = None;
         self.generate_vocab_problem();
 
-        self.math_solved_count = 0;
-        self.math_feedback = None;
-        self.generate_math_problem();
-
-        self.geography_solved_count = 0;
-        self.geography_feedback = None;
-        self.generate_geography_problem();
+        self.science_solved_count = 0;
+        self.science_feedback = None;
+        self.generate_science_problem();
 
         let rect = win32::get_virtual_screen_rect();
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
@@ -784,6 +844,7 @@ impl InterruptApp {
                 if self.settings.screensaver_style != ScreensaverStyle::Math
                     && self.settings.screensaver_style != ScreensaverStyle::Geography
                     && self.settings.screensaver_style != ScreensaverStyle::Vocab
+                    && self.settings.screensaver_style != ScreensaverStyle::Science
                     && !self.show_pause_unblock_panel
                 {
                     self.show_pause_unblock_panel = true;
@@ -1253,6 +1314,161 @@ impl InterruptApp {
                             });
                     }
 
+                    if self.settings.screensaver_style == ScreensaverStyle::Science {
+                        ui.add_space(20.0);
+                        egui::Frame::none()
+                            .fill(egui::Color32::from_rgba_unmultiplied(10, 22, 40, 230))
+                            .rounding(16.0)
+                            .stroke(egui::Stroke::new(1.5, egui::Color32::from_rgba_unmultiplied(34, 211, 238, 120)))
+                            .inner_margin(egui::Margin::same(24.0))
+                            .show(ui, |ui| {
+                                ui.set_max_width(480.0);
+                                ui.vertical_centered(|ui| {
+                                    ui.label(
+                                        egui::RichText::new(tr(self.settings.language, "science_title"))
+                                            .size(24.0)
+                                            .strong()
+                                            .color(egui::Color32::from_rgb(34, 211, 238)),
+                                    );
+                                    ui.add_space(4.0);
+                                    
+                                    let total_needed = self.settings.science_questions_needed;
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Answer {} STEM trivia questions to unlock early ({}/{} solved)",
+                                            total_needed,
+                                            self.science_solved_count,
+                                            total_needed
+                                        ))
+                                        .size(14.0)
+                                        .color(egui::Color32::LIGHT_GRAY),
+                                    );
+                                    ui.add_space(16.0);
+
+                                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.science_min_pause_percent) / 100;
+                                    let elapsed_sec = self.state_start.elapsed().as_secs();
+
+                                    self.draw_circular_timer(
+                                        ui,
+                                        elapsed_sec as f32,
+                                        (self.settings.pause_time_minutes * 60) as f32,
+                                        min_dur_sec as f32,
+                                    );
+                                    ui.add_space(20.0);
+
+                                    if self.science_solved_count >= total_needed {
+                                        ui.label(
+                                            egui::RichText::new("🎉 All STEM questions solved!")
+                                                .size(20.0)
+                                                .strong()
+                                                .color(egui::Color32::from_rgb(52, 211, 153)),
+                                        );
+                                        ui.add_space(8.0);
+                                        ui.label(
+                                            egui::RichText::new("Break must continue to meet the minimum required off-game duration.")
+                                                .size(14.0)
+                                                .color(egui::Color32::YELLOW),
+                                        );
+                                    } else {
+                                        ui.label(
+                                            egui::RichText::new(&self.science_question_text)
+                                                .size(18.0)
+                                                .strong()
+                                                .color(egui::Color32::WHITE),
+                                        );
+                                        ui.add_space(16.0);
+
+                                        let mut selected_choice: Option<usize> = None;
+                                        egui::Grid::new("science_choices_grid")
+                                            .num_columns(2)
+                                            .spacing([12.0, 10.0])
+                                            .show(ui, |ui| {
+                                                for (idx, choice) in self.science_choices.iter().enumerate() {
+                                                    let btn = ui.add_sized(
+                                                        [210.0, 36.0],
+                                                        egui::Button::new(
+                                                            egui::RichText::new(format!("{}. {}", idx + 1, choice))
+                                                                .size(14.0)
+                                                                .strong()
+                                                        )
+                                                    );
+                                                    if btn.clicked() {
+                                                        selected_choice = Some(idx);
+                                                    }
+                                                    if idx % 2 == 1 {
+                                                        ui.end_row();
+                                                    }
+                                                }
+                                            });
+
+                                        if selected_choice.is_none() {
+                                            for idx in 0..self.science_choices.len() {
+                                                let key = match idx {
+                                                    0 => egui::Key::Num1,
+                                                    1 => egui::Key::Num2,
+                                                    2 => egui::Key::Num3,
+                                                    3 => egui::Key::Num4,
+                                                    _ => egui::Key::Num0,
+                                                };
+                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel || !self.focus_password_field) {
+                                                    selected_choice = Some(idx);
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        if let Some(idx) = selected_choice {
+                                            if idx == self.science_correct_idx {
+                                                self.science_solved_count += 1;
+                                                if self.science_solved_count >= total_needed {
+                                                    if elapsed_sec >= min_dur_sec as u64 {
+                                                        self.transition_to_play(ctx, "solved science exercises");
+                                                    } else {
+                                                        self.science_feedback = Some("Correct! All questions solved! Waiting for break duration...".to_string());
+                                                        self.science_feedback_color = egui::Color32::from_rgb(52, 211, 153);
+                                                    }
+                                                } else {
+                                                    self.science_feedback = Some(tr(self.settings.language, "correct_feedback").to_string());
+                                                    self.science_feedback_color = egui::Color32::from_rgb(52, 211, 153);
+                                                    self.generate_science_problem();
+                                                }
+                                            } else {
+                                                self.science_feedback = Some(tr(self.settings.language, "incorrect_feedback").to_string());
+                                                self.science_feedback_color = egui::Color32::from_rgb(248, 113, 113);
+                                            }
+                                        }
+
+                                        if let Some(ref feedback) = self.science_feedback {
+                                            ui.add_space(10.0);
+                                            ui.label(
+                                                egui::RichText::new(feedback)
+                                                    .size(14.0)
+                                                    .color(self.science_feedback_color),
+                                            );
+                                        }
+
+                                        if !self.science_explanation.is_empty() {
+                                            ui.add_space(6.0);
+                                            ui.label(
+                                                egui::RichText::new(&self.science_explanation)
+                                                    .size(13.0)
+                                                    .italics()
+                                                    .color(egui::Color32::from_rgb(34, 211, 238)),
+                                            );
+                                        }
+                                    }
+
+                                    if !self.show_pause_unblock_panel {
+                                        ui.add_space(12.0);
+                                        if ui.link("🔑 Use Administrator Password").clicked() {
+                                            self.show_pause_unblock_panel = true;
+                                            self.focus_password_field = true;
+                                        }
+                                    }
+                                });
+                            });
+                    }
+
                     ui.add_space(30.0);
 
                     // Password unblock panel (Only visible when user interacts)
@@ -1603,6 +1819,35 @@ impl InterruptApp {
                                         ui.end_row();
                                     });
                             }
+                            ScreensaverStyle::Science => {
+                                egui::Grid::new("science_settings_grid")
+                                    .num_columns(2)
+                                    .spacing([16.0, 10.0])
+                                    .show(ui, |ui| {
+                                        ui.label("Questions to Solve:");
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_science_questions_needed).range(1..=20));
+                                        ui.end_row();
+
+                                        ui.label("Min Break Duration (%):");
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_science_min_pause_percent).range(30..=100));
+                                        ui.end_row();
+
+                                        ui.label("Difficulty:");
+                                        egui::ComboBox::from_id_source("science_difficulty_selector")
+                                            .selected_text(self.new_science_difficulty.name())
+                                            .width(180.0)
+                                            .show_ui(ui, |ui| {
+                                                for diff in ScienceDifficulty::all() {
+                                                    ui.selectable_value(
+                                                        &mut self.new_science_difficulty,
+                                                        *diff,
+                                                        diff.name(),
+                                                    );
+                                                }
+                                            });
+                                        ui.end_row();
+                                    });
+                            }
                             _ => {
                                 ui.label(egui::RichText::new("This screensaver style has no custom configuration parameters.")
                                     .color(egui::Color32::LIGHT_GRAY));
@@ -1629,6 +1874,9 @@ impl InterruptApp {
                             self.settings.vocab_questions_needed = self.new_vocab_questions_needed;
                             self.settings.vocab_min_pause_percent = self.new_vocab_min_pause_percent;
                             self.settings.vocab_difficulty = self.new_vocab_difficulty;
+                            self.settings.science_questions_needed = self.new_science_questions_needed;
+                            self.settings.science_min_pause_percent = self.new_science_min_pause_percent;
+                            self.settings.science_difficulty = self.new_science_difficulty;
                             win32::init_logging(self.new_enable_logging);
                             if !self.new_password_input.trim().is_empty() {
                                 self.settings.set_password(&self.new_password_input);
@@ -1997,6 +2245,13 @@ mod tests {
             vocab_solved_count: 0,
             vocab_feedback: None,
             vocab_feedback_color: egui::Color32::LIGHT_GRAY,
+            science_question_text: String::new(),
+            science_choices: Vec::new(),
+            science_correct_idx: 0,
+            science_explanation: String::new(),
+            science_solved_count: 0,
+            science_feedback: None,
+            science_feedback_color: egui::Color32::LIGHT_GRAY,
             active_settings_tab: 0,
             new_language: settings.language,
             new_math_questions_needed: settings.math_questions_needed,
@@ -2008,6 +2263,9 @@ mod tests {
             new_vocab_questions_needed: settings.vocab_questions_needed,
             new_vocab_min_pause_percent: settings.vocab_min_pause_percent,
             new_vocab_difficulty: settings.vocab_difficulty,
+            new_science_questions_needed: settings.science_questions_needed,
+            new_science_min_pause_percent: settings.science_min_pause_percent,
+            new_science_difficulty: settings.science_difficulty,
         }
     }
 
@@ -2052,6 +2310,25 @@ mod tests {
                 assert!(!app.vocab_question_text.is_empty(), "Vocab question text should not be empty");
                 assert_eq!(app.vocab_choices.len(), 4, "Vocab problem should have exactly 4 choices");
                 assert!(app.vocab_correct_idx < 4, "Correct index should be within choices bounds");
+            }
+        }
+    }
+
+    #[test]
+    fn test_science_problem_generation_multilingual() {
+        let settings = AppSettings::default();
+        let mut app = create_test_app(settings);
+
+        for lang in &[Language::English, Language::Spanish] {
+            app.settings.language = *lang;
+            for difficulty in &[ScienceDifficulty::Low, ScienceDifficulty::Medium, ScienceDifficulty::High] {
+                app.settings.science_difficulty = *difficulty;
+                app.generate_science_problem();
+
+                assert!(!app.science_question_text.is_empty(), "Science question text should not be empty");
+                assert_eq!(app.science_choices.len(), 4, "Science problem should have exactly 4 choices");
+                assert!(app.science_correct_idx < 4, "Correct index should be within choices bounds");
+                assert!(!app.science_explanation.is_empty(), "Science explanation should not be empty");
             }
         }
     }

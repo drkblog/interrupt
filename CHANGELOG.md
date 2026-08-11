@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.21.0] - 2026-08-11
 
 ### Added
+- **FT-08: Science & Nature Trivia Lock Screen**: Interactive STEM trivia quizzes (astronomy & space, animal biology, earth science, physics facts) with bite-sized educational explanations after each answer in both English 🇬🇧 and Spanish 🇪🇸 across 3 difficulty tiers.
 - **FT-06: Vocabulary & Spelling Quiz Lock Screen**: Interactive spelling unscrambles, vocabulary definition matching, synonym/antonym selection, and letter fill-in-the-blanks with 3 grade levels (Low / Early Elementary, Medium / Upper Elementary, High / Middle School).
 - **Multi-Language Support (i18n)**: Full localization support for English 🇬🇧 and Spanish 🇪🇸 across all UI screens, settings, buttons, guided breathing instructions, and quiz question datasets.
 

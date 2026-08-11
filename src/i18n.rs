@@ -92,6 +92,9 @@ pub fn tr(lang: Language, key: &'static str) -> &'static str {
         (Language::English, "tab_vocab") => "📚 Vocab & Spelling",
         (Language::Spanish, "tab_vocab") => "📚 Vocabulario y Ortografía",
 
+        (Language::English, "tab_science") => "🧪 Science & Nature",
+        (Language::Spanish, "tab_science") => "🧪 Ciencia y Naturaleza",
+
         // General Settings Labels
         (Language::English, "language_label") => "Interface Language:",
         (Language::Spanish, "language_label") => "Idioma de la interfaz:",
@@ -151,6 +154,9 @@ pub fn tr(lang: Language, key: &'static str) -> &'static str {
 
         (Language::English, "vocab_title") => "📚 Vocabulary & Spelling Quiz",
         (Language::Spanish, "vocab_title") => "📚 Quiz de Vocabulario y Ortografía",
+
+        (Language::English, "science_title") => "🧪 Science & Nature Trivia",
+        (Language::Spanish, "science_title") => "🧪 Trivia de Ciencia y Naturaleza",
 
         (Language::English, "correct_feedback") => "✨ Correct! Great job.",
         (Language::Spanish, "correct_feedback") => "✨ ¡Correcto! Buen trabajo.",
@@ -493,6 +499,284 @@ pub fn get_vocab_question_pool(lang: Language, difficulty: crate::config::VocabD
                 prompt: "Descifra las letras: B - E - N - E - V - O - L - E - N - C - I - A",
                 correct: "Benevolencia",
                 wrong: ["Benebolencia", "Benevolensia", "Benevolente"],
+            },
+        ],
+    }
+}
+
+pub struct ScienceItem {
+    pub prompt: &'static str,
+    pub correct: &'static str,
+    pub wrong: [&'static str; 3],
+    pub explanation: &'static str,
+}
+
+pub fn get_science_question_pool(lang: Language, difficulty: crate::config::ScienceDifficulty) -> &'static [ScienceItem] {
+    use crate::config::ScienceDifficulty::*;
+
+    match (lang, difficulty) {
+        (Language::English, Low) => &[
+            ScienceItem {
+                prompt: "Which planet is known as the Red Planet?",
+                correct: "Mars 🔴",
+                wrong: ["Venus ♀️", "Jupiter ♃", "Saturn ♄"],
+                explanation: "💡 Did you know? Mars appears red due to iron oxide (rust) on its surface.",
+            },
+            ScienceItem {
+                prompt: "What process do plants use to convert sunlight into energy?",
+                correct: "Photosynthesis 🍃",
+                wrong: ["Respiration", "Digestion", "Fermentation"],
+                explanation: "💡 Did you know? Photosynthesis produces oxygen, which animals and humans breathe.",
+            },
+            ScienceItem {
+                prompt: "What is the hardest natural substance on Earth?",
+                correct: "Diamond 💎",
+                wrong: ["Gold", "Granite", "Quartz"],
+                explanation: "💡 Did you know? Diamonds are formed deep within Earth under extreme pressure and heat.",
+            },
+            ScienceItem {
+                prompt: "Which force pulls objects toward the center of Earth?",
+                correct: "Gravity 🍏",
+                wrong: ["Magnetism", "Friction", "Tension"],
+                explanation: "💡 Did you know? Sir Isaac Newton formulated the law of universal gravitation in 1687.",
+            },
+            ScienceItem {
+                prompt: "Which mammal is capable of true sustained flight?",
+                correct: "Bat 🦇",
+                wrong: ["Flying Squirrel", "Sugar Glider", "Penguin"],
+                explanation: "💡 Did you know? Bats are the only mammals naturally capable of powered flight.",
+            },
+            ScienceItem {
+                prompt: "What gas do humans need to breathe to survive?",
+                correct: "Oxygen 💨",
+                wrong: ["Carbon Dioxide", "Nitrogen", "Helium"],
+                explanation: "💡 Did you know? Oxygen makes up about 21% of Earth's atmosphere.",
+            },
+            ScienceItem {
+                prompt: "What is the center of an atom called?",
+                correct: "Nucleus ⚛️",
+                wrong: ["Electron", "Proton", "Orbit"],
+                explanation: "💡 Did you know? The nucleus contains protons and neutrons, holding almost all of the atom's mass.",
+            },
+            ScienceItem {
+                prompt: "Which giant star is at the center of our solar system?",
+                correct: "The Sun ☀️",
+                wrong: ["Sirius", "Proxima Centauri", "Betelgeuse"],
+                explanation: "💡 Did you know? The Sun contains 99.8% of the total mass of the solar system.",
+            },
+        ],
+        (Language::English, Medium) => &[
+            ScienceItem {
+                prompt: "What is the largest planet in our solar system?",
+                correct: "Jupiter 🪐",
+                wrong: ["Saturn", "Neptune", "Uranus"],
+                explanation: "💡 Did you know? Jupiter is so large that over 1,300 Earths could fit inside it.",
+            },
+            ScienceItem {
+                prompt: "What is the chemical formula for water?",
+                correct: "H₂O 💧",
+                wrong: ["CO₂", "NaCl", "O₂"],
+                explanation: "💡 Did you know? Water molecules consist of two hydrogen atoms bonded to one oxygen atom.",
+            },
+            ScienceItem {
+                prompt: "Which layer of the atmosphere contains most of Earth's weather?",
+                correct: "Troposphere 🌤️",
+                wrong: ["Stratosphere", "Mesosphere", "Thermosphere"],
+                explanation: "💡 Did you know? The troposphere extends up to about 8 to 15 kilometers above sea level.",
+            },
+            ScienceItem {
+                prompt: "Which organ in the human body pumps blood through the circulatory system?",
+                correct: "Heart 🫀",
+                wrong: ["Lungs", "Liver", "Brain"],
+                explanation: "💡 Did you know? The human heart beats about 100,000 times per day.",
+            },
+            ScienceItem {
+                prompt: "What unit is used to measure electrical current?",
+                correct: "Ampere (Amp) ⚡",
+                wrong: ["Volt", "Watt", "Ohm"],
+                explanation: "💡 Did you know? Named after André-Marie Ampère, pioneer in electromagnetism.",
+            },
+            ScienceItem {
+                prompt: "What is the process by which liquid water turns into water vapor?",
+                correct: "Evaporation ☁️",
+                wrong: ["Condensation", "Precipitation", "Sublimation"],
+                explanation: "💡 Did you know? Evaporation is a key phase in Earth's water cycle driven by solar heat.",
+            },
+            ScienceItem {
+                prompt: "Which planet is famous for its prominent ring system?",
+                correct: "Saturn 🪐",
+                wrong: ["Mars", "Mercury", "Venus"],
+                explanation: "💡 Did you know? Saturn's rings are made mostly of ice particles and space dust.",
+            },
+        ],
+        (Language::English, High) => &[
+            ScienceItem {
+                prompt: "What is the speed of light in a vacuum approximately?",
+                correct: "300,000 km/s ⚡",
+                wrong: ["150,000 km/s", "1,000,000 km/s", "30,000 km/s"],
+                explanation: "💡 Did you know? Light takes about 8 minutes and 20 seconds to travel from the Sun to Earth.",
+            },
+            ScienceItem {
+                prompt: "Which cell organelle is known as the powerhouse of the cell?",
+                correct: "Mitochondria 🔬",
+                wrong: ["Nucleus", "Ribosome", "Golgi Apparatus"],
+                explanation: "💡 Did you know? Mitochondria generate most of the ATP energy powering biochemical reactions.",
+            },
+            ScienceItem {
+                prompt: "What type of celestial object is a pulsar?",
+                correct: "Neutron Star 💫",
+                wrong: ["Black Hole", "White Dwarf", "Red Giant"],
+                explanation: "💡 Did you know? Pulsars are rapidly rotating neutron stars emitting beams of radiation.",
+            },
+            ScienceItem {
+                prompt: "What is the boundary between Earth's crust and mantle called?",
+                correct: "Moho Discontinuity 🌋",
+                wrong: ["Gutenberg Discontinuity", "Conrad Discontinuity", "Lehmann Discontinuity"],
+                explanation: "💡 Did you know? Discovered by seismologist Andrija Mohorovičić in 1909.",
+            },
+            ScienceItem {
+                prompt: "Which chemical element has the atomic number 1?",
+                correct: "Hydrogen ⚛️",
+                wrong: ["Helium", "Lithium", "Carbon"],
+                explanation: "💡 Did you know? Hydrogen makes up roughly 75% of all baryonic mass in the universe.",
+            },
+            ScienceItem {
+                prompt: "What law of thermodynamics states that energy cannot be created or destroyed?",
+                correct: "First Law (Conservation) ⚖️",
+                wrong: ["Second Law (Entropy)", "Third Law (Absolute Zero)", "Zeroth Law"],
+                explanation: "💡 Did you know? Energy can only change form, such as chemical energy turning into heat.",
+            },
+        ],
+        (Language::Spanish, Low) => &[
+            ScienceItem {
+                prompt: "¿Qué planeta es conocido como el Planeta Rojo?",
+                correct: "Marte 🔴",
+                wrong: ["Venus ♀️", "Júpiter ♃", "Saturno ♄"],
+                explanation: "💡 ¿Sabías que? Marte se ve rojo debido al óxido de hierro (herrumbre) en su superficie.",
+            },
+            ScienceItem {
+                prompt: "¿Qué proceso usan las plantas para convertir la luz solar en energía?",
+                correct: "Fotosíntesis 🍃",
+                wrong: ["Respiración", "Digestión", "Fermentación"],
+                explanation: "💡 ¿Sabías que? La fotosíntesis produce oxígeno, el cual respiran los animales y humanos.",
+            },
+            ScienceItem {
+                prompt: "¿Cuál es la sustancia natural más dura de la Tierra?",
+                correct: "Diamante 💎",
+                wrong: ["Oro", "Granito", "Cuarzo"],
+                explanation: "💡 ¿Sabías que? Los diamantes se forman en las profundidades de la Tierra bajo extrema presión.",
+            },
+            ScienceItem {
+                prompt: "¿Qué fuerza atrae los objetos hacia el centro de la Tierra?",
+                correct: "Gravedad 🍏",
+                wrong: ["Magnetismo", "Fricción", "Tensión"],
+                explanation: "💡 ¿Sabías que? Sir Isaac Newton formuló la ley de la gravitación universal en 1687.",
+            },
+            ScienceItem {
+                prompt: "¿Qué mamífero es capaz de volar de forma continua y sostenida?",
+                correct: "Murciélago 🦇",
+                wrong: ["Ardilla Voladora", "Petauro del Azúcar", "Pingüino"],
+                explanation: "💡 ¿Sabías que? Los murciélagos son los únicos mamíferos capaces de vuelo activo.",
+            },
+            ScienceItem {
+                prompt: "¿Qué gas necesitamos respirar los humanos para vivir?",
+                correct: "Oxígeno 💨",
+                wrong: ["Dióxido de Carbono", "Nitrógeno", "Helio"],
+                explanation: "💡 ¿Sabías que? El oxígeno compone aproximadamente el 21% de la atmósfera terrestre.",
+            },
+            ScienceItem {
+                prompt: "¿Cómo se llama el centro de un átomo?",
+                correct: "Núcleo ⚛️",
+                wrong: ["Electrón", "Protón", "Órbita"],
+                explanation: "💡 ¿Sabías que? El núcleo contiene protones y neutrones y alberga casi toda la masa del átomo.",
+            },
+            ScienceItem {
+                prompt: "¿Qué estrella gigante se encuentra en el centro de nuestro sistema solar?",
+                correct: "El Sol ☀️",
+                wrong: ["Sirio", "Próxima Centauri", "Betelgeuse"],
+                explanation: "💡 ¿Sabías que? El Sol contiene el 99.8% de toda la masa del sistema solar.",
+            },
+        ],
+        (Language::Spanish, Medium) => &[
+            ScienceItem {
+                prompt: "¿Cuál es el planeta más grande de nuestro sistema solar?",
+                correct: "Júpiter 🪐",
+                wrong: ["Saturno", "Neptuno", "Urano"],
+                explanation: "💡 ¿Sabías que? Júpiter es tan grande que dentro de él cabrían más de 1,300 Tierras.",
+            },
+            ScienceItem {
+                prompt: "¿Cuál es la fórmula química del agua?",
+                correct: "H₂O 💧",
+                wrong: ["CO₂", "NaCl", "O₂"],
+                explanation: "💡 ¿Sabías que? Cada molécula de agua tiene dos átomos de hidrógeno y uno de oxígeno.",
+            },
+            ScienceItem {
+                prompt: "¿En qué capa de la atmósfera ocurren la mayoría de los fenómenos meteorológicos?",
+                correct: "Troposfera 🌤️",
+                wrong: ["Estratosfera", "Mesosfera", "Termosfera"],
+                explanation: "💡 ¿Sabías que? La troposfera se extiende desde la superficie hasta los 8-15 km de altura.",
+            },
+            ScienceItem {
+                prompt: "¿Qué órgano del cuerpo humano bombea sangre a todo el sistema circulatorio?",
+                correct: "Corazón 🫀",
+                wrong: ["Pulmones", "Hígado", "Cerebro"],
+                explanation: "💡 ¿Sabías que? El corazón humano late unas 100,000 veces al día.",
+            },
+            ScienceItem {
+                prompt: "¿Qué unidad se utiliza para medir la corriente eléctrica?",
+                correct: "Amperio (Amp) ⚡",
+                wrong: ["Voltio", "Vatio", "Ohmio"],
+                explanation: "💡 ¿Sabías que? Lleva el nombre de André-Marie Ampère, pionero del electromagnetismo.",
+            },
+            ScienceItem {
+                prompt: "¿Cómo se llama el proceso por el cual el agua líquida se convierte en vapor?",
+                correct: "Evaporación ☁️",
+                wrong: ["Condensación", "Precipitación", "Sublimación"],
+                explanation: "💡 ¿Sabías que? La evaporación es impulsada por el calor del Sol en el ciclo del agua.",
+            },
+            ScienceItem {
+                prompt: "¿Qué planeta es famoso por sus deslumbrantes anillos?",
+                correct: "Saturno 🪐",
+                wrong: ["Marte", "Mercurio", "Venus"],
+                explanation: "💡 ¿Sabías que? Los anillos de Saturno están formados principalmente por partículas de hielo y polvo.",
+            },
+        ],
+        (Language::Spanish, High) => &[
+            ScienceItem {
+                prompt: "¿Cuál es la velocidad aproximada de la luz en el vacío?",
+                correct: "300,000 km/s ⚡",
+                wrong: ["150,000 km/s", "1,000,000 km/s", "30,000 km/s"],
+                explanation: "💡 ¿Sabías que? La luz del Sol tarda unos 8 minutos y 20 segundos en llegar a la Tierra.",
+            },
+            ScienceItem {
+                prompt: "¿Qué orgánulo celular es conocido como la central de energía de la célula?",
+                correct: "Mitocondria 🔬",
+                wrong: ["Núcleo", "Ribosoma", "Aparato de Golgi"],
+                explanation: "💡 ¿Sabías que? Las mitocondrias generan la mayor parte del ATP usado en reacciones celulares.",
+            },
+            ScienceItem {
+                prompt: "¿Qué tipo de objeto celeste es un púlsar?",
+                correct: "Estrella de Neutrones 💫",
+                wrong: ["Agujero Negro", "Enana Blanca", "Gigante Roja"],
+                explanation: "💡 ¿Sabías que? Los púlsares son estrellas de neutrones en rápida rotación que emiten radiación.",
+            },
+            ScienceItem {
+                prompt: "¿Cómo se llama la frontera entre la corteza terrestre y el manto?",
+                correct: "Discontinuidad de Mohorovičić 🌋",
+                wrong: ["Discontinuidad de Gutenberg", "Discontinuidad de Conrad", "Discontinuidad de Lehmann"],
+                explanation: "💡 ¿Sabías que? Fue descubierta por el sismólogo croata Andrija Mohorovičić en 1909.",
+            },
+            ScienceItem {
+                prompt: "¿Qué elemento químico tiene el número atómico 1?",
+                correct: "Hidrógeno ⚛️",
+                wrong: ["Helio", "Litio", "Carbono"],
+                explanation: "💡 ¿Sabías que? El hidrógeno representa aproximadamente el 75% de la masa bariónica del universo.",
+            },
+            ScienceItem {
+                prompt: "¿Qué ley de la termodinámica establece que la energía no se crea ni se destruye?",
+                correct: "Primera Ley (Conservación) ⚖️",
+                wrong: ["Segunda Ley (Entropía)", "Tercera Ley (Cero Absoluto)", "Ley Cero"],
+                explanation: "💡 ¿Sabías que? La energía solo se transforma, por ejemplo de energía química a calor.",
             },
         ],
     }
