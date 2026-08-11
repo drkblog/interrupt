@@ -11,7 +11,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     GetWindowTextW, GetWindowThreadProcessId, IsWindow, SetForegroundWindow, SetWindowLongW, SetWindowPos,
     SetWindowsHookExW, ShowWindow, UnhookWindowsHookEx, GWL_STYLE, HWND_TOPMOST,
     KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MB_ICONINFORMATION, MB_ICONWARNING, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
-    SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
+    SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, SWP_NOMOVE, HWND_NOTOPMOST, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
     WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_VISIBLE,
     CreatePopupMenu, AppendMenuW, TrackPopupMenu, DestroyMenu, GetCursorPos, SetWindowLongPtrW,
     GWLP_WNDPROC, WM_USER, WM_LBUTTONUP, WM_LBUTTONDBLCLK, WM_RBUTTONUP, MF_STRING, MF_SEPARATOR,
@@ -318,12 +318,12 @@ pub fn show_app_window(visible: bool) {
                 
                 SetWindowPos(
                     hwnd,
-                    std::ptr::null_mut(),
-                    100,
-                    100,
-                    540,
-                    460,
-                    SWP_SHOWWINDOW | SWP_FRAMECHANGED | SWP_NOZORDER,
+                    HWND_NOTOPMOST,
+                    0,
+                    0,
+                    640,
+                    560,
+                    SWP_SHOWWINDOW | SWP_FRAMECHANGED | SWP_NOMOVE,
                 );
                 ShowWindow(hwnd, SW_RESTORE);
             } else {

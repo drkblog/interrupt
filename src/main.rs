@@ -7,7 +7,7 @@ mod win32;
 
 use config::{AppSettings, GeographyDifficulty, MathDifficulty, ScienceDifficulty, VocabDifficulty};
 use eframe::egui;
-use i18n::{get_science_question_pool, get_vocab_question_pool, tr, Language};
+use i18n::{get_geography_question_pool, get_science_question_pool, get_vocab_question_pool, tr, Language};
 use screensaver::{get_background_color, render_screensaver_style_localized, ScreensaverStyle};
 use std::time::{Duration, Instant};
 
@@ -355,80 +355,23 @@ impl InterruptApp {
             .unwrap_or_default()
             .as_nanos();
 
-        let difficulty = self.settings.geography_difficulty;
-        let pool: &[(&str, &str, [&str; 3])] = match difficulty {
-            GeographyDifficulty::Low => &[
-                ("Which country has this flag: 🇫🇷?", "France 🇫🇷", ["Italy 🇮🇹", "Spain 🇪🇸", "Germany 🇩🇪"]),
-                ("Which country has this flag: 🇯🇵?", "Japan 🇯🇵", ["China 🇨🇳", "South Korea 🇰🇷", "Thailand 🇹🇭"]),
-                ("Which country has this flag: 🇺🇸?", "United States 🇺🇸", ["Canada 🇨🇦", "United Kingdom 🇬🇧", "Australia 🇦🇺"]),
-                ("Which country has this flag: 🇧🇷?", "Brazil 🇧🇷", ["Argentina 🇦🇷", "Colombia 🇨🇴", "Peru 🇵🇪"]),
-                ("Which country has this flag: 🇩🇪?", "Germany 🇩🇪", ["Austria 🇦🇹", "Belgium 🇧🇪", "Netherlands 🇳🇱"]),
-                ("Which country has this flag: 🇮🇹?", "Italy 🇮🇹", ["France 🇫🇷", "Spain 🇪🇸", "Greece 🇬🇷"]),
-                ("Which country has this flag: 🇬🇧?", "United Kingdom 🇬🇧", ["Ireland 🇮🇪", "Australia 🇦🇺", "New Zealand 🇳🇿"]),
-                ("Which country has this flag: 🇲🇽?", "Mexico 🇲🇽", ["Spain 🇪🇸", "Colombia 🇨🇴", "Argentina 🇦🇷"]),
-                ("What is the capital of France 🇫🇷?", "Paris", ["Lyon", "Marseille", "Nice"]),
-                ("Which continent is Brazil 🇧🇷 in?", "South America", ["North America", "Europe", "Africa"]),
-                ("What is the capital of Japan 🇯🇵?", "Tokyo", ["Kyoto", "Osaka", "Yokohama"]),
-                ("What is the capital of the United States 🇺🇸?", "Washington, D.C.", ["New York", "Los Angeles", "Chicago"]),
-                ("Which continent is Egypt 🇪🇬 in?", "Africa", ["Asia", "Europe", "South America"]),
-                ("What is the capital of Italy 🇮🇹?", "Rome", ["Milan", "Venice", "Naples"]),
-                ("Which continent is Australia 🇦🇺 in?", "Oceania", ["Europe", "Asia", "Africa"]),
-                ("What is the capital of Germany 🇩🇪?", "Berlin", ["Munich", "Frankfurt", "Hamburg"]),
-                ("What is the capital of Spain 🇪🇸?", "Madrid", ["Barcelona", "Seville", "Valencia"]),
-                ("What is the capital of the United Kingdom 🇬🇧?", "London", ["Edinburgh", "Dublin", "Manchester"]),
-            ],
-            GeographyDifficulty::Medium => &[
-                ("Which country has this flag: 🇨🇦?", "Canada 🇨🇦", ["United States 🇺🇸", "Australia 🇦🇺", "New Zealand 🇳🇿"]),
-                ("Which country has this flag: 🇦🇷?", "Argentina 🇦🇷", ["Uruguay 🇺🇾", "Chile 🇨🇱", "Brazil 🇧🇷"]),
-                ("Which country has this flag: 🇰🇷?", "South Korea 🇰🇷", ["Japan 🇯🇵", "China 🇨🇳", "Vietnam 🇻🇳"]),
-                ("Which country has this flag: 🇪🇬?", "Egypt 🇪🇬", ["Morocco 🇲🇦", "Saudi Arabia 🇸🇦", "Greece 🇬🇷"]),
-                ("Which country has this flag: 🇸🇪?", "Sweden 🇸🇪", ["Norway 🇳🇴", "Finland 🇫🇮", "Denmark 🇩🇰"]),
-                ("Which country has this flag: 🇬🇷?", "Greece 🇬🇷", ["Italy 🇮🇹", "Turkey 🇹🇷", "Cyprus 🇨🇾"]),
-                ("Which country has this flag: 🇮🇳?", "India 🇮🇳", ["Pakistan 🇵🇰", "Bangladesh 🇧🇩", "Sri Lanka 🇱🇰"]),
-                ("Which country has this flag: 🇨🇴?", "Colombia 🇨🇴", ["Ecuador 🇪🇨", "Venezuela 🇻🇪", "Bolivia 🇧🇴"]),
-                ("What is the capital of Argentina 🇦🇷?", "Buenos Aires", ["Cordoba", "Rosario", "Mendoza"]),
-                ("What is the capital of Canada 🇨🇦?", "Ottawa", ["Toronto", "Montreal", "Vancouver"]),
-                ("Which continent is India 🇮🇳 in?", "Asia", ["Europe", "Africa", "Oceania"]),
-                ("What is the capital of South Korea 🇰🇷?", "Seoul", ["Busan", "Incheon", "Daegu"]),
-                ("What is the capital of Mexico 🇲🇽?", "Mexico City", ["Guadalajara", "Monterrey", "Cancun"]),
-                ("What is the capital of Greece 🇬🇷?", "Athens", ["Thessaloniki", "Heraklion", "Patras"]),
-                ("What is the capital of Sweden 🇸🇪?", "Stockholm", ["Gothenburg", "Malmo", "Uppsala"]),
-                ("What is the capital of Thailand 🇹🇭?", "Bangkok", ["Chiang Mai", "Phuket", "Pattaya"]),
-                ("What is the capital of Egypt 🇪🇬?", "Cairo", ["Alexandria", "Giza", "Luxor"]),
-                ("What is the capital of Norway 🇳🇴?", "Oslo", ["Bergen", "Trondheim", "Stavanger"]),
-            ],
-            GeographyDifficulty::High => &[
-                ("Which country has this flag: 🇦🇺?", "Australia 🇦🇺", ["New Zealand 🇳🇿", "United Kingdom 🇬🇧", "Fiji 🇫🇯"]),
-                ("Which country has this flag: 🇨🇭?", "Switzerland 🇨🇭", ["Austria 🇦🇹", "Denmark 🇩🇰", "Sweden 🇸🇪"]),
-                ("Which country has this flag: 🇹🇷?", "Turkey 🇹🇷", ["Greece 🇬🇷", "Egypt 🇪🇬", "Tunisia 🇹🇳"]),
-                ("Which country has this flag: 🇿🇦?", "South Africa 🇿🇦", ["Kenya 🇰🇪", "Nigeria 🇳🇬", "Zimbabwe 🇿🇼"]),
-                ("Which country has this flag: 🇳🇿?", "New Zealand 🇳🇿", ["Australia 🇦🇺", "United Kingdom 🇬🇧", "Iceland 🇮🇸"]),
-                ("Which country has this flag: 🇰🇪?", "Kenya 🇰🇪", ["Ethiopia 🇪🇹", "Tanzania 🇹🇿", "Uganda 🇺🇬"]),
-                ("Which country has this flag: 🇳🇵?", "Nepal 🇳🇵", ["Bhutan 🇧🇹", "India 🇮🇳", "Myanmar 🇲🇲"]),
-                ("Which country has this flag: 🇲🇦?", "Morocco 🇲🇦", ["Algeria 🇩🇿", "Tunisia 🇹🇳", "Egypt 🇪🇬"]),
-                ("What is the capital of Australia 🇦🇺?", "Canberra", ["Sydney", "Melbourne", "Brisbane"]),
-                ("What is the capital of Brazil 🇧🇷?", "Brasilia", ["Rio de Janeiro", "Sao Paulo", "Salvador"]),
-                ("What is the capital of Kazakhstan 🇰🇿?", "Astana", ["Almaty", "Shymkent", "Karaganda"]),
-                ("What is the capital of Kenya 🇰🇪?", "Nairobi", ["Mombasa", "Kisumu", "Nakuru"]),
-                ("What is the capital of Uruguay 🇺🇾?", "Montevideo", ["Salto", "Ciudad de la Costa", "Paysandu"]),
-                ("What is the capital of Madagascar 🇲🇬?", "Antananarivo", ["Toamasina", "Antsirabe", "Mahajanga"]),
-                ("What is the capital of Nepal 🇳🇵?", "Kathmandu", ["Pokhara", "Lalitpur", "Bharatpur"]),
-                ("What is the capital of Estonia 🇪🇪?", "Tallinn", ["Tartu", "Narva", "Parnu"]),
-                ("What is the capital of Morocco 🇲🇦?", "Rabat", ["Casablanca", "Marrakesh", "Fes"]),
-                ("What is the capital of Switzerland 🇨🇭?", "Bern", ["Zurich", "Geneva", "Basel"]),
-                ("What is the capital of Turkey 🇹🇷?", "Ankara", ["Istanbul", "Izmir", "Bursa"]),
-                ("What is the capital of New Zealand 🇳🇿?", "Wellington", ["Auckland", "Christchurch", "Hamilton"]),
-            ],
-        };
+        let pool = get_geography_question_pool(self.settings.language, self.settings.geography_difficulty);
+        if pool.is_empty() {
+            return;
+        }
 
         let idx = (ticks as usize) % pool.len();
-        let (prompt, correct, wrong) = pool[idx];
+        let item = &pool[idx];
 
-        let mut choices = vec![wrong[0].to_string(), wrong[1].to_string(), wrong[2].to_string()];
+        let mut choices = vec![
+            item.wrong[0].to_string(),
+            item.wrong[1].to_string(),
+            item.wrong[2].to_string(),
+        ];
         let correct_idx = ((ticks >> 4) % 4) as usize;
-        choices.insert(correct_idx, correct.to_string());
+        choices.insert(correct_idx, item.correct.to_string());
 
-        self.geography_question_text = prompt.to_string();
+        self.geography_question_text = item.prompt.to_string();
         self.geography_choices = choices;
         self.geography_correct_idx = correct_idx;
         self.geography_feedback = None;
@@ -1606,11 +1549,11 @@ impl InterruptApp {
             .open(&mut open)
             .resizable(false)
             .collapsible(false)
-            .fixed_size(egui::vec2(480.0, 460.0))
+            .fixed_size(egui::vec2(480.0, 500.0))
             .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
             .show(ctx, |ui| {
                 egui::ScrollArea::vertical()
-                    .max_height(420.0)
+                    .max_height(460.0)
                     .auto_shrink([false, false])
                     .show(ui, |ui| {
                         if !self.settings_unlocked {
@@ -1864,7 +1807,7 @@ impl InterruptApp {
                             ui.add_space(20.0);
 
                             ui.horizontal(|ui| {
-                                if ui.button(tr(self.settings.language, "save_settings")).clicked() {
+                                if ui.button(tr(self.settings.language, "💾 Save Settings")).clicked() {
                                     self.settings.play_time_minutes = self.new_play_time;
                                     self.settings.pause_time_minutes = self.new_pause_time;
                                     self.settings.warning_time_seconds = self.new_warning_time_seconds;
@@ -1919,12 +1862,22 @@ impl eframe::App for InterruptApp {
             self.tray_registered = true;
         }
 
+        // Prevent main window from entering fullscreen mode when not in screen break pause
+        if self.state != AppState::Pause {
+            if ctx.input(|i| i.viewport().fullscreen.unwrap_or(false)) {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(640.0, 560.0)));
+            }
+        }
+
         // Poll native tray commands from subclassed window procedure
         let tray_cmd = win32::poll_pending_tray_command();
         if tray_cmd > 0 {
             win32::log_to_file(&format!("[LOG] Received native tray command: {}", tray_cmd));
             if tray_cmd == 1001 {
                 win32::show_app_window(true);
+                ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
+                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(640.0, 560.0)));
                 ctx.send_viewport_cmd(egui::ViewportCommand::Visible(true));
                 ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
             } else if tray_cmd == 1002 {
@@ -2007,7 +1960,7 @@ impl eframe::App for InterruptApp {
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             let settings_btn = ui.add(
-                                egui::Button::new(egui::RichText::new(tr(self.settings.language, "⚙️ Settings")).strong())
+                                egui::Button::new(egui::RichText::new(tr(self.settings.language, "⚙ Settings")).strong())
                                     .min_size(egui::vec2(90.0, 28.0))
                             );
                             if settings_btn.clicked() {
@@ -2097,9 +2050,13 @@ impl eframe::App for InterruptApp {
                         
                     ui.add_space(16.0);
                     
-                    // Main action buttons
+                    // Main action buttons (Dynamically Centered)
                     ui.horizontal(|ui| {
-                        ui.add_space(76.0);
+                        let buttons_total_width = 160.0 + 16.0 + 160.0;
+                        let space = (ui.available_width() - buttons_total_width) / 2.0;
+                        if space > 0.0 {
+                            ui.add_space(space);
+                        }
                         
                         // Primary button
                         let lock_btn = ui.add(
@@ -2130,10 +2087,8 @@ impl eframe::App for InterruptApp {
                     
                     ui.add_space(20.0);
                     
-                    // Info pills / badges
-                    ui.horizontal_wrapped(|ui| {
-                        ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
-                        
+                    // Info pills / badges (Dynamically Centered)
+                    ui.horizontal(|ui| {
                         let info_items = vec![
                             (format!("{}: {} {}", tr(self.settings.language, "Play:"), self.settings.play_time_minutes, tr(self.settings.language, "min")), egui::Color32::from_rgb(56, 189, 248)),
                             (format!("{}: {} {}", tr(self.settings.language, "Break:"), self.settings.pause_time_minutes, tr(self.settings.language, "min")), egui::Color32::from_rgb(168, 85, 247)),
@@ -2141,22 +2096,30 @@ impl eframe::App for InterruptApp {
                             (format!("{}: {}", tr(self.settings.language, "Style:"), self.settings.screensaver_style.name_localized(self.settings.language).split(' ').next().unwrap_or("")), egui::Color32::from_rgb(52, 211, 153)),
                             ("Master PW: On".to_string(), egui::Color32::from_rgb(148, 163, 184)),
                         ];
-                        
-                        ui.add_space(24.0); // Center adjustment
-                        for (text, color) in info_items {
-                            egui::Frame::none()
-                                .fill(egui::Color32::from_rgb(30, 41, 59))
-                                .rounding(6.0)
-                                .stroke(egui::Stroke::new(1.0, color))
-                                .inner_margin(egui::Margin::symmetric(10.0, 4.0))
-                                .show(ui, |ui| {
-                                    ui.label(
-                                        egui::RichText::new(text)
-                                            .size(12.0)
-                                            .color(egui::Color32::WHITE)
-                                    );
-                                });
+
+                        let approx_badges_width = 460.0;
+                        let space = (ui.available_width() - approx_badges_width) / 2.0;
+                        if space > 0.0 {
+                            ui.add_space(space);
                         }
+                        
+                        ui.horizontal_wrapped(|ui| {
+                            ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
+                            for (text, color) in info_items {
+                                egui::Frame::none()
+                                    .fill(egui::Color32::from_rgb(30, 41, 59))
+                                    .rounding(6.0)
+                                    .stroke(egui::Stroke::new(1.0, color))
+                                    .inner_margin(egui::Margin::symmetric(10.0, 4.0))
+                                    .show(ui, |ui| {
+                                        ui.label(
+                                            egui::RichText::new(text)
+                                                .size(12.0)
+                                                .color(egui::Color32::WHITE)
+                                        );
+                                    });
+                            }
+                        });
                     });
                 });
             });
@@ -2280,29 +2243,27 @@ mod tests {
     }
 
     #[test]
-    fn test_geography_problem_flag_generation() {
+    fn test_geography_problem_generation_multilingual() {
         let settings = AppSettings::default();
         let mut app = create_test_app(settings);
 
-        for difficulty in &[GeographyDifficulty::Low, GeographyDifficulty::Medium, GeographyDifficulty::High] {
-            app.settings.geography_difficulty = *difficulty;
-            app.generate_geography_problem();
+        for lang in &[Language::English, Language::Spanish] {
+            app.settings.language = *lang;
+            for difficulty in &[GeographyDifficulty::Low, GeographyDifficulty::Medium, GeographyDifficulty::High] {
+                app.settings.geography_difficulty = *difficulty;
+                app.generate_geography_problem();
 
-            assert!(!app.geography_question_text.is_empty(), "Geography question text should not be empty");
-            assert_eq!(app.geography_choices.len(), 4, "Geography problem should have exactly 4 choices");
-            assert!(app.geography_correct_idx < 4, "Correct index should be within choices bounds");
+                assert!(!app.geography_question_text.is_empty(), "Geography question text should not be empty");
+                assert_eq!(app.geography_choices.len(), 4, "Geography problem should have exactly 4 choices");
+                assert!(app.geography_correct_idx < 4, "Correct index should be within choices bounds");
 
-            // Verify that the prompt or choices contain flag emojis / unicode flag badges
-            let has_flag_in_prompt = app.geography_question_text.chars().any(|c| c >= '\u{1F1E6}' && c <= '\u{1F1FF}');
-            let has_flag_in_choices = app.geography_choices.iter().any(|choice| {
-                choice.chars().any(|c| c >= '\u{1F1E6}' && c <= '\u{1F1FF}')
-            });
-
-            assert!(
-                has_flag_in_prompt || has_flag_in_choices,
-                "Geography problem for difficulty {:?} should incorporate flag indicators/emojis in prompt or choices",
-                difficulty
-            );
+                // Ensure prompt does not contain unrendered regional indicator symbols (U+1F1E6 to U+1F1FF)
+                let has_raw_flag_emoji = app.geography_question_text.chars().any(|c| c >= '\u{1F1E6}' && c <= '\u{1F1FF}');
+                assert!(
+                    !has_raw_flag_emoji,
+                    "Geography prompt should use clean text without raw regional indicator flag emojis"
+                );
+            }
         }
     }
 

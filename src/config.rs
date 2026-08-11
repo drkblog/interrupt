@@ -37,6 +37,7 @@ impl MathDifficulty {
         &[MathDifficulty::Low, MathDifficulty::Medium, MathDifficulty::High]
     }
 
+    #[allow(dead_code)]
     pub fn name(&self) -> &'static str {
         self.name_localized(Language::English)
     }
@@ -83,6 +84,7 @@ impl GeographyDifficulty {
         &[GeographyDifficulty::Low, GeographyDifficulty::Medium, GeographyDifficulty::High]
     }
 
+    #[allow(dead_code)]
     pub fn name(&self) -> &'static str {
         self.name_localized(Language::English)
     }
@@ -129,6 +131,7 @@ impl VocabDifficulty {
         &[VocabDifficulty::Low, VocabDifficulty::Medium, VocabDifficulty::High]
     }
 
+    #[allow(dead_code)]
     pub fn name(&self) -> &'static str {
         self.name_localized(Language::English)
     }
@@ -175,6 +178,7 @@ impl ScienceDifficulty {
         &[ScienceDifficulty::Low, ScienceDifficulty::Medium, ScienceDifficulty::High]
     }
 
+    #[allow(dead_code)]
     pub fn name(&self) -> &'static str {
         self.name_localized(Language::English)
     }

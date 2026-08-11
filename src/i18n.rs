@@ -50,7 +50,7 @@ pub fn tr(lang: Language, text: &'static str) -> &'static str {
         "Style:" => "Estilo:",
         "🔒 Lock Now" => "🔒 Bloquear Ahora",
         "🔄 Reset Timer" => "🔄 Reiniciar Temporizador",
-        "⚙️ Settings" => "⚙️ Configuración",
+        "⚙ Settings" => "⚙ Configuración",
         "🚪 Exit App" => "🚪 Salir de la App",
 
         // Warning Banner
@@ -134,6 +134,129 @@ pub fn tr(lang: Language, text: &'static str) -> &'static str {
 
         // Fallback to source English text if not translated
         _ => text,
+    }
+}
+
+pub struct GeographyItem {
+    pub prompt: &'static str,
+    pub correct: &'static str,
+    pub wrong: [&'static str; 3],
+}
+
+pub fn get_geography_question_pool(lang: Language, difficulty: crate::config::GeographyDifficulty) -> &'static [GeographyItem] {
+    use crate::config::GeographyDifficulty::*;
+
+    match (lang, difficulty) {
+        (Language::Spanish, Low) => &[
+            GeographyItem { prompt: "¿Qué país tiene una hoja de arce roja en su bandera?", correct: "Canadá", wrong: ["Estados Unidos", "Australia", "Nueva Zelanda"] },
+            GeographyItem { prompt: "¿Qué país tiene un sol rojo sobre fondo blanco en su bandera?", correct: "Japón", wrong: ["China", "Corea del Sur", "Tailandia"] },
+            GeographyItem { prompt: "¿Qué país tiene barras y estrellas en su bandera?", correct: "Estados Unidos", wrong: ["Canadá", "Reino Unido", "Australia"] },
+            GeographyItem { prompt: "¿Qué país tiene un rombo amarillo sobre fondo verde en su bandera?", correct: "Brasil", wrong: ["Argentina", "Colombia", "Perú"] },
+            GeographyItem { prompt: "¿Qué país tiene una bandera tricolor azul, blanca y roja?", correct: "Francia", wrong: ["Italia", "España", "Alemania"] },
+            GeographyItem { prompt: "¿Qué país tiene franjas horizontales negra, roja y dorada?", correct: "Alemania", wrong: ["Austria", "Bélgica", "Países Bajos"] },
+            GeographyItem { prompt: "¿Qué país tiene la Union Jack y la Cruz del Sur en su bandera?", correct: "Australia", wrong: ["Reino Unido", "Nueva Zelanda", "Fiyi"] },
+            GeographyItem { prompt: "¿Qué país tiene un águila devorando una serpiente en su escudo nacional?", correct: "México", wrong: ["España", "Colombia", "Argentina"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Francia?", correct: "París", wrong: ["Lyon", "Marsella", "Niza"] },
+            GeographyItem { prompt: "¿En qué continente está ubicado Brasil?", correct: "América del Sur", wrong: ["América del Norte", "Europa", "África"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Japón?", correct: "Tokio", wrong: ["Kioto", "Osaka", "Yokohama"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Estados Unidos?", correct: "Washington D.C.", wrong: ["Nueva York", "Los Ángeles", "Chicago"] },
+            GeographyItem { prompt: "¿En qué continente se encuentra Egipto?", correct: "África", wrong: ["Asia", "Europa", "América del Sur"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Italia?", correct: "Roma", wrong: ["Milán", "Venecia", "Nápoles"] },
+            GeographyItem { prompt: "¿En qué continente está ubicada Australia?", correct: "Oceanía", wrong: ["Europa", "Asia", "África"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Alemania?", correct: "Berlín", wrong: ["Múnich", "Fráncfort", "Hamburgo"] },
+            GeographyItem { prompt: "¿Cuál es la capital de España?", correct: "Madrid", wrong: ["Barcelona", "Sevilla", "Valencia"] },
+            GeographyItem { prompt: "¿Cuál es la capital del Reino Unido?", correct: "Londres", wrong: ["Edimburgo", "Dublín", "Mánchester"] },
+        ],
+        (Language::Spanish, Medium) => &[
+            GeographyItem { prompt: "¿Qué país tiene un taegeuk (círculo rojo y azul) en su bandera?", correct: "Corea del Sur", wrong: ["Japón", "China", "Vietnam"] },
+            GeographyItem { prompt: "¿Qué país tiene un Sol de Mayo sobre franjas celestes y blancas?", correct: "Argentina", wrong: ["Uruguay", "Chile", "Brasil"] },
+            GeographyItem { prompt: "¿Qué país tiene la rueda Ashoka Chakra en su bandera tricolor?", correct: "India", wrong: ["Pakistán", "Bangladés", "Sri Lanka"] },
+            GeographyItem { prompt: "¿Qué país tiene una cruz azul sobre fondo amarillo en su bandera?", correct: "Suecia", wrong: ["Noruega", "Finlandia", "Dinamarca"] },
+            GeographyItem { prompt: "¿Qué país tiene franjas azules y blancas con una cruz en la esquina?", correct: "Grecia", wrong: ["Italia", "Turquía", "Chipre"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Argentina?", correct: "Buenos Aires", wrong: ["Córdoba", "Rosario", "Mendoza"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Canadá?", correct: "Ottawa", wrong: ["Toronto", "Montreal", "Vancouver"] },
+            GeographyItem { prompt: "¿En qué continente se encuentra la India?", correct: "Asia", wrong: ["Europa", "África", "Oceanía"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Corea del Sur?", correct: "Seúl", wrong: ["Busan", "Incheon", "Daegu"] },
+            GeographyItem { prompt: "¿Cuál es la capital de México?", correct: "Ciudad de México", wrong: ["Guadalajara", "Monterrey", "Cancún"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Grecia?", correct: "Atenas", wrong: ["Tesalónica", "Heraclión", "Patras"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Suecia?", correct: "Estocolmo", wrong: ["Gotemburgo", "Malmö", "Uppsala"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Tailandia?", correct: "Bangkok", wrong: ["Chiang Mai", "Phuket", "Pattaya"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Egipto?", correct: "El Cairo", wrong: ["Alejandría", "Giza", "Lúxor"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Noruega?", correct: "Oslo", wrong: ["Bergen", "Trondheim", "Stavanger"] },
+        ],
+        (Language::Spanish, High) => &[
+            GeographyItem { prompt: "¿Qué país tiene la única bandera nacional no rectangular?", correct: "Nepal", wrong: ["Bután", "India", "Myanmar"] },
+            GeographyItem { prompt: "¿Qué país tiene una cruz blanca sobre fondo cuadrado rojo?", correct: "Suiza", wrong: ["Austria", "Dinamarca", "Suecia"] },
+            GeographyItem { prompt: "¿Qué país tiene una luna creciente y estrella blancas sobre fondo rojo?", correct: "Turquía", wrong: ["Grecia", "Egipto", "Túnez"] },
+            GeographyItem { prompt: "¿Qué país tiene una franja en forma de Y y seis colores en su bandera?", correct: "Sudáfrica", wrong: ["Kenia", "Nigeria", "Zimbabue"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Australia?", correct: "Canberra", wrong: ["Sídney", "Melbourne", "Brisbane"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Brasil?", correct: "Brasilia", wrong: ["Río de Janeiro", "San Pablo", "Salvador"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Kazajistán?", correct: "Astana", wrong: ["Almaty", "Shymkent", "Karaganda"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Kenia?", correct: "Nairobi", wrong: ["Mombasa", "Kisumu", "Nakuru"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Uruguay?", correct: "Montevideo", wrong: ["Salto", "Ciudad de la Costa", "Paysandú"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Madagascar?", correct: "Antananarivo", wrong: ["Toamasina", "Antsirabe", "Mahajanga"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Nepal?", correct: "Katmandú", wrong: ["Pokhara", "Lalitpur", "Bharatpur"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Estonia?", correct: "Tallin", wrong: ["Tartu", "Narva", "Pärnu"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Marruecos?", correct: "Rabat", wrong: ["Casablanca", "Marrakech", "Fez"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Suiza?", correct: "Berna", wrong: ["Zúrich", "Ginebra", "Basilea"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Turquía?", correct: "Ankara", wrong: ["Estambul", "Esmirna", "Bursa"] },
+            GeographyItem { prompt: "¿Cuál es la capital de Nueva Zelanda?", correct: "Wellington", wrong: ["Auckland", "Christchurch", "Hamilton"] },
+        ],
+        (_, Low) => &[
+            GeographyItem { prompt: "Which country's flag features a red maple leaf?", correct: "Canada", wrong: ["United States", "Australia", "New Zealand"] },
+            GeographyItem { prompt: "Which country's flag features a red sun on a white field?", correct: "Japan", wrong: ["China", "South Korea", "Thailand"] },
+            GeographyItem { prompt: "Which country's flag features stars and stripes?", correct: "United States", wrong: ["Canada", "United Kingdom", "Australia"] },
+            GeographyItem { prompt: "Which country's flag features a green field with a yellow diamond?", correct: "Brazil", wrong: ["Argentina", "Colombia", "Peru"] },
+            GeographyItem { prompt: "Which country's flag features a blue, white, and red vertical tricolor?", correct: "France", wrong: ["Italy", "Spain", "Germany"] },
+            GeographyItem { prompt: "Which country's flag features horizontal stripes of black, red, and gold?", correct: "Germany", wrong: ["Austria", "Belgium", "Netherlands"] },
+            GeographyItem { prompt: "Which country's flag features a Union Jack and Southern Cross stars?", correct: "Australia", wrong: ["United Kingdom", "New Zealand", "Fiji"] },
+            GeographyItem { prompt: "Which country's flag features an eagle perched on a cactus eating a snake?", correct: "Mexico", wrong: ["Spain", "Colombia", "Argentina"] },
+            GeographyItem { prompt: "What is the capital of France?", correct: "Paris", wrong: ["Lyon", "Marseille", "Nice"] },
+            GeographyItem { prompt: "Which continent is Brazil located in?", correct: "South America", wrong: ["North America", "Europe", "Africa"] },
+            GeographyItem { prompt: "What is the capital of Japan?", correct: "Tokyo", wrong: ["Kyoto", "Osaka", "Yokohama"] },
+            GeographyItem { prompt: "What is the capital of the United States?", correct: "Washington, D.C.", wrong: ["New York", "Los Angeles", "Chicago"] },
+            GeographyItem { prompt: "Which continent is Egypt located in?", correct: "Africa", wrong: ["Asia", "Europe", "South America"] },
+            GeographyItem { prompt: "What is the capital of Italy?", correct: "Rome", wrong: ["Milan", "Venice", "Naples"] },
+            GeographyItem { prompt: "Which continent is Australia located in?", correct: "Oceania", wrong: ["Europe", "Asia", "Africa"] },
+            GeographyItem { prompt: "What is the capital of Germany?", correct: "Berlin", wrong: ["Munich", "Frankfurt", "Hamburg"] },
+            GeographyItem { prompt: "What is the capital of Spain?", correct: "Madrid", wrong: ["Barcelona", "Seville", "Valencia"] },
+            GeographyItem { prompt: "What is the capital of the United Kingdom?", correct: "London", wrong: ["Edinburgh", "Dublin", "Manchester"] },
+        ],
+        (_, Medium) => &[
+            GeographyItem { prompt: "Which country's flag features a taegeuk (red and blue circle) and trigrams?", correct: "South Korea", wrong: ["Japan", "China", "Vietnam"] },
+            GeographyItem { prompt: "Which country's flag features a Sun of May on light blue and white stripes?", correct: "Argentina", wrong: ["Uruguay", "Chile", "Brazil"] },
+            GeographyItem { prompt: "Which country's flag features the Ashoka Chakra wheel on a tricolor?", correct: "India", wrong: ["Pakistan", "Bangladesh", "Sri Lanka"] },
+            GeographyItem { prompt: "Which country's flag features a yellow cross on a blue field?", correct: "Sweden", wrong: ["Norway", "Finland", "Denmark"] },
+            GeographyItem { prompt: "Which country's flag features blue and white stripes with a cross in the corner?", correct: "Greece", wrong: ["Italy", "Turkey", "Cyprus"] },
+            GeographyItem { prompt: "What is the capital of Argentina?", correct: "Buenos Aires", wrong: ["Cordoba", "Rosario", "Mendoza"] },
+            GeographyItem { prompt: "What is the capital of Canada?", correct: "Ottawa", wrong: ["Toronto", "Montreal", "Vancouver"] },
+            GeographyItem { prompt: "Which continent is India located in?", correct: "Asia", wrong: ["Europe", "Africa", "Oceania"] },
+            GeographyItem { prompt: "What is the capital of South Korea?", correct: "Seoul", wrong: ["Busan", "Incheon", "Daegu"] },
+            GeographyItem { prompt: "What is the capital of Mexico?", correct: "Mexico City", wrong: ["Guadalajara", "Monterrey", "Cancun"] },
+            GeographyItem { prompt: "What is the capital of Greece?", correct: "Athens", wrong: ["Thessaloniki", "Heraklion", "Patras"] },
+            GeographyItem { prompt: "What is the capital of Sweden?", correct: "Stockholm", wrong: ["Gothenburg", "Malmo", "Uppsala"] },
+            GeographyItem { prompt: "What is the capital of Thailand?", correct: "Bangkok", wrong: ["Chiang Mai", "Phuket", "Pattaya"] },
+            GeographyItem { prompt: "What is the capital of Egypt?", correct: "Cairo", wrong: ["Alexandria", "Giza", "Luxor"] },
+            GeographyItem { prompt: "What is the capital of Norway?", correct: "Oslo", wrong: ["Bergen", "Trondheim", "Stavanger"] },
+        ],
+        (_, High) => &[
+            GeographyItem { prompt: "Which country has the world's only non-rectangular national flag?", correct: "Nepal", wrong: ["Bhutan", "India", "Myanmar"] },
+            GeographyItem { prompt: "Which country's flag features a white cross on a square red field?", correct: "Switzerland", wrong: ["Austria", "Denmark", "Sweden"] },
+            GeographyItem { prompt: "Which country's flag features a white crescent moon and star on a red field?", correct: "Turkey", wrong: ["Greece", "Egypt", "Tunisia"] },
+            GeographyItem { prompt: "Which country's flag features a Y-shaped green band and six colors?", correct: "South Africa", wrong: ["Kenya", "Nigeria", "Zimbabwe"] },
+            GeographyItem { prompt: "What is the capital of Australia?", correct: "Canberra", wrong: ["Sydney", "Melbourne", "Brisbane"] },
+            GeographyItem { prompt: "What is the capital of Brazil?", correct: "Brasilia", wrong: ["Rio de Janeiro", "Sao Paulo", "Salvador"] },
+            GeographyItem { prompt: "What is the capital of Kazakhstan?", correct: "Astana", wrong: ["Almaty", "Shymkent", "Karaganda"] },
+            GeographyItem { prompt: "What is the capital of Kenya?", correct: "Nairobi", wrong: ["Mombasa", "Kisumu", "Nakuru"] },
+            GeographyItem { prompt: "What is the capital of Uruguay?", correct: "Montevideo", wrong: ["Salto", "Ciudad de la Costa", "Paysandu"] },
+            GeographyItem { prompt: "What is the capital of Madagascar?", correct: "Antananarivo", wrong: ["Toamasina", "Antsirabe", "Mahajanga"] },
+            GeographyItem { prompt: "What is the capital of Nepal?", correct: "Kathmandu", wrong: ["Pokhara", "Lalitpur", "Bharatpur"] },
+            GeographyItem { prompt: "What is the capital of Estonia?", correct: "Tallinn", wrong: ["Tartu", "Narva", "Parnu"] },
+            GeographyItem { prompt: "What is the capital of Morocco?", correct: "Rabat", wrong: ["Casablanca", "Marrakesh", "Fes"] },
+            GeographyItem { prompt: "What is the capital of Switzerland?", correct: "Bern", wrong: ["Zurich", "Geneva", "Basel"] },
+            GeographyItem { prompt: "What is the capital of Turkey?", correct: "Ankara", wrong: ["Istanbul", "Izmir", "Bursa"] },
+            GeographyItem { prompt: "What is the capital of New Zealand?", correct: "Wellington", wrong: ["Auckland", "Christchurch", "Hamilton"] },
+        ],
     }
 }
 
@@ -767,7 +890,7 @@ mod tests {
             "Interrupt - Control de Pausas de Pantalla"
         );
         assert_eq!(tr(Language::Spanish, "🔒 Lock Now"), "🔒 Bloquear Ahora");
-        assert_eq!(tr(Language::Spanish, "⚙️ Settings"), "⚙️ Configuración");
+        assert_eq!(tr(Language::Spanish, "⚙ Settings"), "⚙ Configuración");
         assert_eq!(
             tr(Language::Spanish, "Reset Timer Confirmation"),
             "Confirmación de Reinicio de Temporizador"
