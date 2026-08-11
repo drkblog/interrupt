@@ -747,10 +747,10 @@ impl InterruptApp {
         self.show_pause_unblock_panel = false;
         self.last_pause_interaction = None;
 
-        win32::log_to_file("[DEBUG] transition_to_play: sending Fullscreen(false), Normal level, size 540x460");
+        win32::log_to_file("[DEBUG] transition_to_play: sending Fullscreen(false), Normal level, size 640x560");
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::Normal));
-        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(540.0, 460.0)));
+        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(640.0, 560.0)));
 
         win32::restore_app_window_normal();
         win32::restore_foreground_window();
@@ -1505,7 +1505,7 @@ impl InterruptApp {
                                     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
                                 }
 
-                                if ui.input(|i| i.key_pressed(egui::Key::Enter)) && response.has_focus() {
+                                if ui.input(|i| i.key_pressed(egui::Key::Enter)) || (response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter))) {
                                     self.try_unblock(ctx);
                                 }
 
@@ -1606,299 +1606,304 @@ impl InterruptApp {
             .open(&mut open)
             .resizable(false)
             .collapsible(false)
-            .fixed_size(egui::vec2(440.0, 380.0))
+            .fixed_size(egui::vec2(480.0, 460.0))
             .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
             .show(ctx, |ui| {
-                if !self.settings_unlocked {
-                    ui.heading(tr(self.settings.language, "Authentication Required"));
-                    ui.label(tr(self.settings.language, "Enter current password or master password to access settings:"));
-                    ui.add_space(8.0);
+                egui::ScrollArea::vertical()
+                    .max_height(420.0)
+                    .auto_shrink([false, false])
+                    .show(ui, |ui| {
+                        if !self.settings_unlocked {
+                            ui.heading(tr(self.settings.language, "Authentication Required"));
+                            ui.label(tr(self.settings.language, "Enter current password or master password to access settings:"));
+                            ui.add_space(8.0);
 
-                    let response = ui.add(
-                        egui::TextEdit::singleline(&mut self.settings_password_input)
-                            .password(true)
-                            .hint_text(tr(self.settings.language, "Password...")),
-                    );
+                            let response = ui.add(
+                                egui::TextEdit::singleline(&mut self.settings_password_input)
+                                    .password(true)
+                                    .hint_text(tr(self.settings.language, "Password...")),
+                            );
 
-                    if self.focus_settings_password {
-                        response.request_focus();
-                        self.focus_settings_password = false;
-                    }
+                            if self.focus_settings_password {
+                                response.request_focus();
+                                self.focus_settings_password = false;
+                            }
 
-                    if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                        if self.settings.verify_password(&self.settings_password_input) {
-                            self.settings_unlocked = true;
-                            self.settings_password_input.clear();
-                            self.settings_message = None;
+                            if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                                if self.settings.verify_password(&self.settings_password_input) {
+                                    self.settings_unlocked = true;
+                                    self.settings_password_input.clear();
+                                    self.settings_message = None;
+                                } else {
+                                    self.settings_message =
+                                        Some(tr(self.settings.language, "Invalid password authentication.").to_string());
+                                }
+                            }
+
+                            if ui.button(tr(self.settings.language, "Unlock Settings")).clicked() {
+                                if self.settings.verify_password(&self.settings_password_input) {
+                                    self.settings_unlocked = true;
+                                    self.settings_password_input.clear();
+                                    self.settings_message = None;
+                                } else {
+                                    self.settings_message =
+                                        Some(tr(self.settings.language, "Invalid password authentication.").to_string());
+                                }
+                            }
+
+                            if let Some(ref msg) = self.settings_message {
+                                ui.label(egui::RichText::new(msg).color(egui::Color32::LIGHT_RED));
+                            }
                         } else {
-                            self.settings_message =
-                                Some(tr(self.settings.language, "Invalid password authentication.").to_string());
-                        }
-                    }
+                            ui.heading(tr(self.settings.language, "Configure Settings"));
+                            ui.add_space(4.0);
+                            ui.label(
+                                egui::RichText::new(tr(self.settings.language, "⏸ Timer suspended while settings window is open"))
+                                    .color(egui::Color32::YELLOW)
+                                    .size(13.0),
+                            );
+                            ui.add_space(8.0);
 
-                    if ui.button(tr(self.settings.language, "Unlock Settings")).clicked() {
-                        if self.settings.verify_password(&self.settings_password_input) {
-                            self.settings_unlocked = true;
-                            self.settings_password_input.clear();
-                            self.settings_message = None;
-                        } else {
-                            self.settings_message =
-                                Some(tr(self.settings.language, "Invalid password authentication.").to_string());
-                        }
-                    }
-
-                    if let Some(ref msg) = self.settings_message {
-                        ui.label(egui::RichText::new(msg).color(egui::Color32::LIGHT_RED));
-                    }
-                } else {
-                    ui.heading(tr(self.settings.language, "Configure Settings"));
-                    ui.add_space(4.0);
-                    ui.label(
-                        egui::RichText::new(tr(self.settings.language, "⏸ Timer suspended while settings window is open"))
-                            .color(egui::Color32::YELLOW)
-                            .size(13.0),
-                    );
-                    ui.add_space(8.0);
-
-                    // Tab Selector
-                    ui.horizontal(|ui| {
-                        ui.selectable_value(&mut self.active_settings_tab, 0, tr(self.settings.language, "📅 Break Cycles"));
-                        ui.selectable_value(&mut self.active_settings_tab, 1, tr(self.settings.language, "🔒 Lock Screen Settings"));
-                    });
-                    ui.add_space(10.0);
-
-                    if self.active_settings_tab == 0 {
-                        egui::Grid::new("settings_grid")
-                            .num_columns(2)
-                            .spacing([16.0, 10.0])
-                            .show(ui, |ui| {
-                                ui.label(tr(self.settings.language, "Interface Language:"));
-                                egui::ComboBox::from_id_source("language_selector")
-                                    .selected_text(self.new_language.name())
-                                    .width(180.0)
-                                    .show_ui(ui, |ui| {
-                                        for lang in Language::all() {
-                                            ui.selectable_value(
-                                                &mut self.new_language,
-                                                *lang,
-                                                lang.name(),
-                                            );
-                                        }
-                                    });
-                                ui.end_row();
-
-                                ui.label(tr(self.settings.language, "Play Time (minutes):"));
-                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_play_time).range(1..=300));
-                                ui.end_row();
-
-                                ui.label(tr(self.settings.language, "Pause Time (minutes):"));
-                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_pause_time).range(1..=60));
-                                ui.end_row();
-
-                                ui.label(tr(self.settings.language, "Warning Time (seconds):"));
-                                ui.add_sized(
-                                    [180.0, 22.0],
-                                    egui::DragValue::new(&mut self.new_warning_time_seconds).range(5..=300),
-                                );
-                                ui.end_row();
-
-                                ui.label(tr(self.settings.language, "Screensaver Style:"));
-                                egui::ComboBox::from_id_source("screensaver_style_selector")
-                                    .selected_text(self.new_screensaver_style.name_localized(self.new_language))
-                                    .width(180.0)
-                                    .show_ui(ui, |ui| {
-                                        for style in ScreensaverStyle::all() {
-                                            ui.selectable_value(
-                                                &mut self.new_screensaver_style,
-                                                *style,
-                                                style.name_localized(self.new_language),
-                                            );
-                                        }
-                                    });
-                                ui.end_row();
-
-                                ui.label(tr(self.settings.language, "New Password (optional):"));
-                                ui.add_sized(
-                                    [180.0, 22.0],
-                                    egui::TextEdit::singleline(&mut self.new_password_input)
-                                        .password(true),
-                                );
-                                ui.end_row();
-
-                                ui.label(tr(self.settings.language, "Enable Debug Logging:"));
-                                ui.checkbox(&mut self.new_enable_logging, "");
-                                ui.end_row();
+                            // Tab Selector
+                            ui.horizontal(|ui| {
+                                ui.selectable_value(&mut self.active_settings_tab, 0, tr(self.settings.language, "📅 Break Cycles"));
+                                ui.selectable_value(&mut self.active_settings_tab, 1, tr(self.settings.language, "🔒 Lock Screen Settings"));
                             });
-                    } else {
-                        ui.heading(format!("{}: {}", tr(self.settings.language, "Style:"), self.new_screensaver_style.name_localized(self.new_language)));
-                        ui.add_space(8.0);
+                            ui.add_space(10.0);
 
-                        match self.new_screensaver_style {
-                            ScreensaverStyle::Math => {
-                                egui::Grid::new("math_settings_grid")
+                            if self.active_settings_tab == 0 {
+                                egui::Grid::new("settings_grid")
                                     .num_columns(2)
                                     .spacing([16.0, 10.0])
                                     .show(ui, |ui| {
-                                        ui.label(tr(self.settings.language, "Questions to Solve:"));
-                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_math_questions_needed).range(1..=20));
-                                        ui.end_row();
-
-                                        ui.label(tr(self.settings.language, "Min Break Duration (%):"));
-                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_math_min_pause_percent).range(30..=100));
-                                        ui.end_row();
-
-                                        ui.label(tr(self.settings.language, "Difficulty:"));
-                                        egui::ComboBox::from_id_source("math_difficulty_selector")
-                                            .selected_text(self.new_math_difficulty.name_localized(self.new_language))
+                                        ui.label(tr(self.settings.language, "Interface Language:"));
+                                        egui::ComboBox::from_id_source("language_selector")
+                                            .selected_text(self.new_language.name())
                                             .width(180.0)
                                             .show_ui(ui, |ui| {
-                                                for diff in MathDifficulty::all() {
+                                                for lang in Language::all() {
                                                     ui.selectable_value(
-                                                        &mut self.new_math_difficulty,
-                                                        *diff,
-                                                        diff.name_localized(self.new_language),
+                                                        &mut self.new_language,
+                                                        *lang,
+                                                        lang.name(),
                                                     );
                                                 }
                                             });
                                         ui.end_row();
-                                    });
-                            }
-                            ScreensaverStyle::Geography => {
-                                egui::Grid::new("geography_settings_grid")
-                                    .num_columns(2)
-                                    .spacing([16.0, 10.0])
-                                    .show(ui, |ui| {
-                                        ui.label(tr(self.settings.language, "Questions to Solve:"));
-                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_geography_questions_needed).range(1..=20));
+
+                                        ui.label(tr(self.settings.language, "Play Time (minutes):"));
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_play_time).range(1..=300));
                                         ui.end_row();
 
-                                        ui.label(tr(self.settings.language, "Min Break Duration (%):"));
-                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_geography_min_pause_percent).range(30..=100));
+                                        ui.label(tr(self.settings.language, "Pause Time (minutes):"));
+                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_pause_time).range(1..=60));
                                         ui.end_row();
 
-                                        ui.label(tr(self.settings.language, "Difficulty:"));
-                                        egui::ComboBox::from_id_source("geography_difficulty_selector")
-                                            .selected_text(self.new_geography_difficulty.name_localized(self.new_language))
+                                        ui.label(tr(self.settings.language, "Warning Time (seconds):"));
+                                        ui.add_sized(
+                                            [180.0, 22.0],
+                                            egui::DragValue::new(&mut self.new_warning_time_seconds).range(5..=300),
+                                        );
+                                        ui.end_row();
+
+                                        ui.label(tr(self.settings.language, "Screensaver Style:"));
+                                        egui::ComboBox::from_id_source("screensaver_style_selector")
+                                            .selected_text(self.new_screensaver_style.name_localized(self.new_language))
                                             .width(180.0)
                                             .show_ui(ui, |ui| {
-                                                for diff in GeographyDifficulty::all() {
+                                                for style in ScreensaverStyle::all() {
                                                     ui.selectable_value(
-                                                        &mut self.new_geography_difficulty,
-                                                        *diff,
-                                                        diff.name_localized(self.new_language),
+                                                        &mut self.new_screensaver_style,
+                                                        *style,
+                                                        style.name_localized(self.new_language),
                                                     );
                                                 }
                                             });
                                         ui.end_row();
-                                    });
-                            }
-                            ScreensaverStyle::Vocab => {
-                                egui::Grid::new("vocab_settings_grid")
-                                    .num_columns(2)
-                                    .spacing([16.0, 10.0])
-                                    .show(ui, |ui| {
-                                        ui.label(tr(self.settings.language, "Questions to Solve:"));
-                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_vocab_questions_needed).range(1..=20));
+
+                                        ui.label(tr(self.settings.language, "New Password (optional):"));
+                                        ui.add_sized(
+                                            [180.0, 22.0],
+                                            egui::TextEdit::singleline(&mut self.new_password_input)
+                                                .password(true),
+                                        );
                                         ui.end_row();
 
-                                        ui.label(tr(self.settings.language, "Min Break Duration (%):"));
-                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_vocab_min_pause_percent).range(30..=100));
-                                        ui.end_row();
-
-                                        ui.label(tr(self.settings.language, "Difficulty:"));
-                                        egui::ComboBox::from_id_source("vocab_difficulty_selector")
-                                            .selected_text(self.new_vocab_difficulty.name_localized(self.new_language))
-                                            .width(180.0)
-                                            .show_ui(ui, |ui| {
-                                                for diff in VocabDifficulty::all() {
-                                                    ui.selectable_value(
-                                                        &mut self.new_vocab_difficulty,
-                                                        *diff,
-                                                        diff.name_localized(self.new_language),
-                                                    );
-                                                }
-                                            });
+                                        ui.label(tr(self.settings.language, "Enable Debug Logging:"));
+                                        ui.checkbox(&mut self.new_enable_logging, "");
                                         ui.end_row();
                                     });
-                            }
-                            ScreensaverStyle::Science => {
-                                egui::Grid::new("science_settings_grid")
-                                    .num_columns(2)
-                                    .spacing([16.0, 10.0])
-                                    .show(ui, |ui| {
-                                        ui.label(tr(self.settings.language, "Questions to Solve:"));
-                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_science_questions_needed).range(1..=20));
-                                        ui.end_row();
-
-                                        ui.label(tr(self.settings.language, "Min Break Duration (%):"));
-                                        ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_science_min_pause_percent).range(30..=100));
-                                        ui.end_row();
-
-                                        ui.label(tr(self.settings.language, "Difficulty:"));
-                                        egui::ComboBox::from_id_source("science_difficulty_selector")
-                                            .selected_text(self.new_science_difficulty.name_localized(self.new_language))
-                                            .width(180.0)
-                                            .show_ui(ui, |ui| {
-                                                for diff in ScienceDifficulty::all() {
-                                                    ui.selectable_value(
-                                                        &mut self.new_science_difficulty,
-                                                        *diff,
-                                                        diff.name_localized(self.new_language),
-                                                    );
-                                                }
-                                            });
-                                        ui.end_row();
-                                    });
-                            }
-                            _ => {
-                                ui.label(egui::RichText::new(tr(self.settings.language, "This screensaver style has no custom configuration parameters."))
-                                    .color(egui::Color32::LIGHT_GRAY));
-                            }
-                        }
-                    }
-
-                    ui.add_space(20.0);
-
-                    ui.horizontal(|ui| {
-                        if ui.button(tr(self.settings.language, "save_settings")).clicked() {
-                            self.settings.play_time_minutes = self.new_play_time;
-                            self.settings.pause_time_minutes = self.new_pause_time;
-                            self.settings.warning_time_seconds = self.new_warning_time_seconds;
-                            self.settings.screensaver_style = self.new_screensaver_style;
-                            self.settings.enable_logging = self.new_enable_logging;
-                            self.settings.language = self.new_language;
-                            self.settings.math_questions_needed = self.new_math_questions_needed;
-                            self.settings.math_min_pause_percent = self.new_math_min_pause_percent;
-                            self.settings.math_difficulty = self.new_math_difficulty;
-                            self.settings.geography_questions_needed = self.new_geography_questions_needed;
-                            self.settings.geography_min_pause_percent = self.new_geography_min_pause_percent;
-                            self.settings.geography_difficulty = self.new_geography_difficulty;
-                            self.settings.vocab_questions_needed = self.new_vocab_questions_needed;
-                            self.settings.vocab_min_pause_percent = self.new_vocab_min_pause_percent;
-                            self.settings.vocab_difficulty = self.new_vocab_difficulty;
-                            self.settings.science_questions_needed = self.new_science_questions_needed;
-                            self.settings.science_min_pause_percent = self.new_science_min_pause_percent;
-                            self.settings.science_difficulty = self.new_science_difficulty;
-                            win32::init_logging(self.new_enable_logging);
-                            if !self.new_password_input.trim().is_empty() {
-                                self.settings.set_password(&self.new_password_input);
-                                self.new_password_input.clear();
-                            }
-                            if let Err(e) = self.settings.save() {
-                                self.settings_message = Some(format!("Failed to save: {}", e));
                             } else {
-                                self.settings_message =
-                                    Some(tr(self.settings.language, "settings_saved").to_string());
-                                self.close_settings();
+                                ui.heading(format!("{}: {}", tr(self.settings.language, "Style:"), self.new_screensaver_style.name_localized(self.new_language)));
+                                ui.add_space(8.0);
+
+                                match self.new_screensaver_style {
+                                    ScreensaverStyle::Math => {
+                                        egui::Grid::new("math_settings_grid")
+                                            .num_columns(2)
+                                            .spacing([16.0, 10.0])
+                                            .show(ui, |ui| {
+                                                ui.label(tr(self.settings.language, "Questions to Solve:"));
+                                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_math_questions_needed).range(1..=20));
+                                                ui.end_row();
+
+                                                ui.label(tr(self.settings.language, "Min Break Duration (%):"));
+                                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_math_min_pause_percent).range(30..=100));
+                                                ui.end_row();
+
+                                                ui.label(tr(self.settings.language, "Difficulty:"));
+                                                egui::ComboBox::from_id_source("math_difficulty_selector")
+                                                    .selected_text(self.new_math_difficulty.name_localized(self.new_language))
+                                                    .width(180.0)
+                                                    .show_ui(ui, |ui| {
+                                                        for diff in MathDifficulty::all() {
+                                                            ui.selectable_value(
+                                                                &mut self.new_math_difficulty,
+                                                                *diff,
+                                                                diff.name_localized(self.new_language),
+                                                            );
+                                                        }
+                                                    });
+                                                ui.end_row();
+                                            });
+                                    }
+                                    ScreensaverStyle::Geography => {
+                                        egui::Grid::new("geography_settings_grid")
+                                            .num_columns(2)
+                                            .spacing([16.0, 10.0])
+                                            .show(ui, |ui| {
+                                                ui.label(tr(self.settings.language, "Questions to Solve:"));
+                                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_geography_questions_needed).range(1..=20));
+                                                ui.end_row();
+
+                                                ui.label(tr(self.settings.language, "Min Break Duration (%):"));
+                                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_geography_min_pause_percent).range(30..=100));
+                                                ui.end_row();
+
+                                                ui.label(tr(self.settings.language, "Difficulty:"));
+                                                egui::ComboBox::from_id_source("geography_difficulty_selector")
+                                                    .selected_text(self.new_geography_difficulty.name_localized(self.new_language))
+                                                    .width(180.0)
+                                                    .show_ui(ui, |ui| {
+                                                        for diff in GeographyDifficulty::all() {
+                                                            ui.selectable_value(
+                                                                &mut self.new_geography_difficulty,
+                                                                *diff,
+                                                                diff.name_localized(self.new_language),
+                                                            );
+                                                        }
+                                                    });
+                                                ui.end_row();
+                                            });
+                                    }
+                                    ScreensaverStyle::Vocab => {
+                                        egui::Grid::new("vocab_settings_grid")
+                                            .num_columns(2)
+                                            .spacing([16.0, 10.0])
+                                            .show(ui, |ui| {
+                                                ui.label(tr(self.settings.language, "Questions to Solve:"));
+                                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_vocab_questions_needed).range(1..=20));
+                                                ui.end_row();
+
+                                                ui.label(tr(self.settings.language, "Min Break Duration (%):"));
+                                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_vocab_min_pause_percent).range(30..=100));
+                                                ui.end_row();
+
+                                                ui.label(tr(self.settings.language, "Difficulty:"));
+                                                egui::ComboBox::from_id_source("vocab_difficulty_selector")
+                                                    .selected_text(self.new_vocab_difficulty.name_localized(self.new_language))
+                                                    .width(180.0)
+                                                    .show_ui(ui, |ui| {
+                                                        for diff in VocabDifficulty::all() {
+                                                            ui.selectable_value(
+                                                                &mut self.new_vocab_difficulty,
+                                                                *diff,
+                                                                diff.name_localized(self.new_language),
+                                                            );
+                                                        }
+                                                    });
+                                                ui.end_row();
+                                            });
+                                    }
+                                    ScreensaverStyle::Science => {
+                                        egui::Grid::new("science_settings_grid")
+                                            .num_columns(2)
+                                            .spacing([16.0, 10.0])
+                                            .show(ui, |ui| {
+                                                ui.label(tr(self.settings.language, "Questions to Solve:"));
+                                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_science_questions_needed).range(1..=20));
+                                                ui.end_row();
+
+                                                ui.label(tr(self.settings.language, "Min Break Duration (%):"));
+                                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_science_min_pause_percent).range(30..=100));
+                                                ui.end_row();
+
+                                                ui.label(tr(self.settings.language, "Difficulty:"));
+                                                egui::ComboBox::from_id_source("science_difficulty_selector")
+                                                    .selected_text(self.new_science_difficulty.name_localized(self.new_language))
+                                                    .width(180.0)
+                                                    .show_ui(ui, |ui| {
+                                                        for diff in ScienceDifficulty::all() {
+                                                            ui.selectable_value(
+                                                                &mut self.new_science_difficulty,
+                                                                *diff,
+                                                                diff.name_localized(self.new_language),
+                                                            );
+                                                        }
+                                                    });
+                                                ui.end_row();
+                                            });
+                                    }
+                                    _ => {
+                                        ui.label(egui::RichText::new(tr(self.settings.language, "This screensaver style has no custom configuration parameters."))
+                                            .color(egui::Color32::LIGHT_GRAY));
+                                    }
+                                }
+                            }
+
+                            ui.add_space(20.0);
+
+                            ui.horizontal(|ui| {
+                                if ui.button(tr(self.settings.language, "save_settings")).clicked() {
+                                    self.settings.play_time_minutes = self.new_play_time;
+                                    self.settings.pause_time_minutes = self.new_pause_time;
+                                    self.settings.warning_time_seconds = self.new_warning_time_seconds;
+                                    self.settings.screensaver_style = self.new_screensaver_style;
+                                    self.settings.enable_logging = self.new_enable_logging;
+                                    self.settings.language = self.new_language;
+                                    self.settings.math_questions_needed = self.new_math_questions_needed;
+                                    self.settings.math_min_pause_percent = self.new_math_min_pause_percent;
+                                    self.settings.math_difficulty = self.new_math_difficulty;
+                                    self.settings.geography_questions_needed = self.new_geography_questions_needed;
+                                    self.settings.geography_min_pause_percent = self.new_geography_min_pause_percent;
+                                    self.settings.geography_difficulty = self.new_geography_difficulty;
+                                    self.settings.vocab_questions_needed = self.new_vocab_questions_needed;
+                                    self.settings.vocab_min_pause_percent = self.new_vocab_min_pause_percent;
+                                    self.settings.vocab_difficulty = self.new_vocab_difficulty;
+                                    self.settings.science_questions_needed = self.new_science_questions_needed;
+                                    self.settings.science_min_pause_percent = self.new_science_min_pause_percent;
+                                    self.settings.science_difficulty = self.new_science_difficulty;
+                                    win32::init_logging(self.new_enable_logging);
+                                    if !self.new_password_input.trim().is_empty() {
+                                        self.settings.set_password(&self.new_password_input);
+                                        self.new_password_input.clear();
+                                    }
+                                    if let Err(e) = self.settings.save() {
+                                        self.settings_message = Some(format!("Failed to save: {}", e));
+                                    } else {
+                                        self.settings_message =
+                                            Some(tr(self.settings.language, "settings_saved").to_string());
+                                        self.close_settings();
+                                    }
+                                }
+                            });
+
+                            if let Some(ref msg) = self.settings_message {
+                                ui.add_space(8.0);
+                                ui.label(egui::RichText::new(msg).color(egui::Color32::GREEN));
                             }
                         }
                     });
-
-                    if let Some(ref msg) = self.settings_message {
-                        ui.add_space(8.0);
-                        ui.label(egui::RichText::new(msg).color(egui::Color32::GREEN));
-                    }
-                }
             });
 
         if !open {
@@ -2185,7 +2190,7 @@ fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Interrupt - Healthy Screen Breaks")
-            .with_inner_size([540.0, 460.0])
+            .with_inner_size([640.0, 560.0])
             .with_resizable(false),
         ..Default::default()
     };
