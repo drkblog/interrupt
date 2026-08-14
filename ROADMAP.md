@@ -14,6 +14,7 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
 | FT-06 | Vocabulary & Spelling Quiz Lock Screen | Implemented |
 | FT-07 | Country Flags & Geography Trivia Lock Screen | Implemented |
 | FT-08 | Science & Nature Trivia Lock Screen | Implemented |
+| FT-09 | Responsive Centered Info Badges Layout | Implemented |
 
 ---
 
@@ -76,3 +77,10 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
   - Encourages scientific curiosity and daily STEM learning.
   - Features explanations after each response to turn break enforcement into a fun learning moment.
 * **Implementation Plan**: Maintain a structured JSON file of age-appropriate STEM questions and explanations, allowing random sampling per break with configurable topic filters.
+
+### FT-09: Responsive Centered Info Badges Layout
+* **Description**: Dynamically layout main screen bottom information pills into rows that fit the container width, centering each row individually.
+* **Benefits**:
+  - Prevents horizontal badge overflow on narrow window widths or when running in debug mode or under localized long strings.
+  - Maintains clean aesthetic alignment with all rows centered horizontally.
+* **Implementation Plan**: Measure text widths via egui painter layout prior to rendering, pack badges into fitted rows, and apply horizontal padding to center each row.

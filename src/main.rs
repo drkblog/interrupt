@@ -2154,43 +2154,81 @@ impl eframe::App for InterruptApp {
                     
                     ui.add_space(20.0);
                     
-                    // Info pills / badges (Dynamically Centered)
-                    ui.horizontal(|ui| {
-                        let mut info_items = vec![
-                            (format!("{}: {} {}", tr(self.settings.language, "Play:"), self.settings.play_time_minutes, tr(self.settings.language, "min")), egui::Color32::from_rgb(56, 189, 248)),
-                            (format!("{}: {} {}", tr(self.settings.language, "Break:"), self.settings.pause_time_minutes, tr(self.settings.language, "min")), egui::Color32::from_rgb(168, 85, 247)),
-                            (format!("Warn: {}s", self.settings.warning_time_seconds), egui::Color32::from_rgb(244, 63, 94)),
-                            (format!("{}: {}", tr(self.settings.language, "Style:"), self.settings.screensaver_style.name_localized(self.settings.language).split(' ').next().unwrap_or("")), egui::Color32::from_rgb(52, 211, 153)),
-                            ("Master PW: On".to_string(), egui::Color32::from_rgb(148, 163, 184)),
-                        ];
+                    // Info pills / badges (Dynamically Centered with Responsive Wrapping)
+                    let mut info_items = vec![
+                        (format!("{}: {} {}", tr(self.settings.language, "Play:"), self.settings.play_time_minutes, tr(self.settings.language, "min")), egui::Color32::from_rgb(56, 189, 248)),
+                        (format!("{}: {} {}", tr(self.settings.language, "Break:"), self.settings.pause_time_minutes, tr(self.settings.language, "min")), egui::Color32::from_rgb(168, 85, 247)),
+                        (format!("Warn: {}s", self.settings.warning_time_seconds), egui::Color32::from_rgb(244, 63, 94)),
+                        (format!("{}: {}", tr(self.settings.language, "Style:"), self.settings.screensaver_style.name_localized(self.settings.language).split(' ').next().unwrap_or("")), egui::Color32::from_rgb(52, 211, 153)),
+                        ("Master PW: On".to_string(), egui::Color32::from_rgb(148, 163, 184)),
+                    ];
 
-                        if self.debug_mode {
-                            info_items.insert(0, ("[DEBUG MODE: 30s/30s]".to_string(), egui::Color32::from_rgb(251, 146, 60)));
-                        }
+                    if self.debug_mode {
+                        info_items.insert(0, ("[DEBUG MODE: 30s/30s]".to_string(), egui::Color32::from_rgb(251, 146, 60)));
+                    }
 
-                        let approx_badges_width = 460.0;
-                        let space = (ui.available_width() - approx_badges_width) / 2.0;
-                        if space > 0.0 {
-                            ui.add_space(space);
+                    let available_w = ui.available_width();
+                    let font_id = egui::FontId::proportional(12.0);
+                    let item_spacing_x = 6.0;
+                    let item_spacing_y = 6.0;
+                    let badge_padding_x = 20.0;
+
+                    // Measure badges and group into rows that fit available_width
+                    let mut measured_items = Vec::new();
+                    for (text, color) in info_items {
+                        let galley = ui.painter().layout_no_wrap(text.clone(), font_id.clone(), egui::Color32::WHITE);
+                        let w = galley.rect.width() + badge_padding_x;
+                        measured_items.push((text, color, w));
+                    }
+
+                    let mut rows: Vec<Vec<(String, egui::Color32, f32)>> = Vec::new();
+                    let mut current_row: Vec<(String, egui::Color32, f32)> = Vec::new();
+                    let mut current_row_w: f32 = 0.0;
+
+                    for item in measured_items {
+                        let item_w = item.2;
+                        let spacing = if current_row.is_empty() { 0.0 } else { item_spacing_x };
+                        if !current_row.is_empty() && (current_row_w + spacing + item_w > available_w) {
+                            rows.push(current_row);
+                            current_row = vec![item];
+                            current_row_w = item_w;
+                        } else {
+                            current_row_w += spacing + item_w;
+                            current_row.push(item);
                         }
-                        
-                        ui.horizontal_wrapped(|ui| {
-                            ui.spacing_mut().item_spacing = egui::vec2(6.0, 6.0);
-                            for (text, color) in info_items {
-                                egui::Frame::none()
-                                    .fill(egui::Color32::from_rgb(30, 41, 59))
-                                    .rounding(6.0)
-                                    .stroke(egui::Stroke::new(1.0, color))
-                                    .inner_margin(egui::Margin::symmetric(10.0, 4.0))
-                                    .show(ui, |ui| {
-                                        ui.label(
-                                            egui::RichText::new(text)
-                                                .size(12.0)
-                                                .color(egui::Color32::WHITE)
-                                        );
-                                    });
-                            }
-                        });
+                    }
+                    if !current_row.is_empty() {
+                        rows.push(current_row);
+                    }
+
+                    ui.vertical(|ui| {
+                        ui.spacing_mut().item_spacing.y = item_spacing_y;
+                        for row in rows {
+                            let total_row_w: f32 = row.iter().map(|item| item.2).sum::<f32>()
+                                + (row.len().saturating_sub(1) as f32) * item_spacing_x;
+                            let space = (available_w - total_row_w) / 2.0;
+
+                            ui.horizontal(|ui| {
+                                ui.spacing_mut().item_spacing.x = item_spacing_x;
+                                if space > 0.0 {
+                                    ui.add_space(space);
+                                }
+                                for (text, color, _) in row {
+                                    egui::Frame::none()
+                                        .fill(egui::Color32::from_rgb(30, 41, 59))
+                                        .rounding(6.0)
+                                        .stroke(egui::Stroke::new(1.0, color))
+                                        .inner_margin(egui::Margin::symmetric(10.0, 4.0))
+                                        .show(ui, |ui| {
+                                            ui.label(
+                                                egui::RichText::new(text)
+                                                    .size(12.0)
+                                                    .color(egui::Color32::WHITE)
+                                            );
+                                        });
+                                }
+                            });
+                        }
                     });
                 });
             });
