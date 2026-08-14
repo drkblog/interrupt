@@ -1,5 +1,5 @@
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
-use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT, WPARAM, GetLastError, POINT};
+use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT, WPARAM, GetLastError, POINT, RECT};
 use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     VK_ESCAPE, VK_F4, VK_LWIN, VK_RWIN, VK_TAB, keybd_event, KEYEVENTF_KEYUP,
@@ -11,12 +11,12 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     GetWindowTextW, GetWindowThreadProcessId, IsWindow, SetForegroundWindow, SetWindowLongW, SetWindowPos,
     SetWindowsHookExW, ShowWindow, UnhookWindowsHookEx, GWL_STYLE, HWND_TOPMOST,
     KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MB_ICONINFORMATION, MB_ICONWARNING, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
-    SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, SWP_NOMOVE, HWND_NOTOPMOST, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
+    SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, HWND_NOTOPMOST, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
     WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_VISIBLE,
     CreatePopupMenu, AppendMenuW, TrackPopupMenu, DestroyMenu, GetCursorPos, SetWindowLongPtrW,
     GWLP_WNDPROC, WM_USER, WM_LBUTTONUP, WM_LBUTTONDBLCLK, WM_RBUTTONUP, MF_STRING, MF_SEPARATOR,
     TPM_RETURNCMD, TPM_NONOTIFY, WNDPROC, CreateIconIndirect, ICONINFO, WM_CLOSE, WM_SYSCOMMAND, SC_MINIMIZE, DestroyIcon, IsWindowVisible,
-    GetWindowLongW, GWL_EXSTYLE, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW, SWP_NOSIZE, SWP_NOZORDER
+    GetWindowLongW, GWL_EXSTYLE, WS_EX_APPWINDOW, WS_EX_TOOLWINDOW, SWP_NOSIZE, SWP_NOZORDER, GetWindowRect, SM_CXSCREEN, SM_CYSCREEN, SW_HIDE,
 };
 use windows_sys::Win32::UI::Shell::{
     NOTIFYICONDATAW, Shell_NotifyIconW, NIM_ADD, NIM_DELETE, NIF_ICON, NIF_MESSAGE, NIF_TIP
@@ -25,6 +25,11 @@ use windows_sys::Win32::UI::Shell::{
 static HOOK_HANDLE: AtomicIsize = AtomicIsize::new(0);
 static HOOK_ENABLED: AtomicBool = AtomicBool::new(false);
 static SAVED_FOREGROUND_HWND: AtomicIsize = AtomicIsize::new(0);
+
+pub static SAVED_WINDOW_X: AtomicIsize = AtomicIsize::new(-1);
+pub static SAVED_WINDOW_Y: AtomicIsize = AtomicIsize::new(-1);
+pub static SAVED_WINDOW_WIDTH: AtomicIsize = AtomicIsize::new(640);
+pub static SAVED_WINDOW_HEIGHT: AtomicIsize = AtomicIsize::new(560);
 
 pub static WAS_VISIBLE_BEFORE_LOCK: AtomicBool = AtomicBool::new(true);
 pub static VISIBILITY_RECORDED: AtomicBool = AtomicBool::new(false);
@@ -315,23 +320,68 @@ pub fn show_app_window(visible: bool) {
                 style &= !WS_EX_TOOLWINDOW;
                 style |= WS_EX_APPWINDOW;
                 SetWindowLongW(hwnd, GWL_EXSTYLE, style as i32);
-                
+
+                let mut rect: RECT = std::mem::zeroed();
+                GetWindowRect(hwnd, &mut rect);
+
+                let is_offscreen = rect.left <= -10000 || rect.top <= -10000;
+                let (x, y, w, h) = if is_offscreen {
+                    let saved_x = SAVED_WINDOW_X.load(Ordering::SeqCst);
+                    let saved_y = SAVED_WINDOW_Y.load(Ordering::SeqCst);
+                    let saved_w = SAVED_WINDOW_WIDTH.load(Ordering::SeqCst) as i32;
+                    let saved_h = SAVED_WINDOW_HEIGHT.load(Ordering::SeqCst) as i32;
+
+                    let width = if saved_w > 0 { saved_w } else { 640 };
+                    let height = if saved_h > 0 { saved_h } else { 560 };
+
+                    if saved_x > -10000 && saved_y > -10000 {
+                        (saved_x as i32, saved_y as i32, width, height)
+                    } else {
+                        let screen_w = GetSystemMetrics(SM_CXSCREEN);
+                        let screen_h = GetSystemMetrics(SM_CYSCREEN);
+                        let cx = if screen_w > 0 { (screen_w - width) / 2 } else { 100 };
+                        let cy = if screen_h > 0 { (screen_h - height) / 2 } else { 100 };
+                        (cx, cy, width, height)
+                    }
+                } else {
+                    let width = rect.right - rect.left;
+                    let height = rect.bottom - rect.top;
+                    (rect.left, rect.top, if width > 0 { width } else { 640 }, if height > 0 { height } else { 560 })
+                };
+
+                log_to_file(&format!("[DEBUG] show_app_window: restoring window to position ({}, {}), size {}x{}", x, y, w, h));
+
                 SetWindowPos(
                     hwnd,
                     HWND_NOTOPMOST,
-                    0,
-                    0,
-                    640,
-                    560,
-                    SWP_SHOWWINDOW | SWP_FRAMECHANGED | SWP_NOMOVE,
+                    x,
+                    y,
+                    w,
+                    h,
+                    SWP_SHOWWINDOW | SWP_FRAMECHANGED,
                 );
                 ShowWindow(hwnd, SW_RESTORE);
+                ShowWindow(hwnd, SW_SHOW);
+                BringWindowToTop(hwnd);
+                SetForegroundWindow(hwnd);
             } else {
+                let mut rect: RECT = std::mem::zeroed();
+                GetWindowRect(hwnd, &mut rect);
+                if rect.left > -10000 && rect.top > -10000 {
+                    SAVED_WINDOW_X.store(rect.left as isize, Ordering::SeqCst);
+                    SAVED_WINDOW_Y.store(rect.top as isize, Ordering::SeqCst);
+                    let w = rect.right - rect.left;
+                    let h = rect.bottom - rect.top;
+                    if w > 0 { SAVED_WINDOW_WIDTH.store(w as isize, Ordering::SeqCst); }
+                    if h > 0 { SAVED_WINDOW_HEIGHT.store(h as isize, Ordering::SeqCst); }
+                    log_to_file(&format!("[DEBUG] show_app_window: saved position ({}, {}), size {}x{}", rect.left, rect.top, w, h));
+                }
+
                 let mut style = GetWindowLongW(hwnd, GWL_EXSTYLE) as u32;
                 style &= !WS_EX_APPWINDOW;
                 style |= WS_EX_TOOLWINDOW;
                 SetWindowLongW(hwnd, GWL_EXSTYLE, style as i32);
-                
+
                 SetWindowPos(
                     hwnd,
                     std::ptr::null_mut(),
@@ -341,6 +391,7 @@ pub fn show_app_window(visible: bool) {
                     0,
                     SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED,
                 );
+                ShowWindow(hwnd, SW_HIDE);
             }
         }
     }
