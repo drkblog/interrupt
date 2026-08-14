@@ -71,6 +71,9 @@ cd interrupt
 # Run application
 cargo run
 
+# Run with 30-second debug cycles (for developers and testing)
+cargo run -- --debug
+
 # Build release executable
 cargo build --release
 

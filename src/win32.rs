@@ -10,7 +10,7 @@ use windows_sys::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, CallNextHookEx, EnumThreadWindows, GetForegroundWindow, GetSystemMetrics,
     GetWindowTextW, GetWindowThreadProcessId, IsWindow, SetForegroundWindow, SetWindowLongW, SetWindowPos,
     SetWindowsHookExW, ShowWindow, UnhookWindowsHookEx, GWL_STYLE, HWND_TOPMOST,
-    KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MB_ICONINFORMATION, MB_ICONWARNING, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
+    KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MB_ICONINFORMATION, MB_ICONWARNING, MB_OK, MB_ICONHAND, MB_ICONQUESTION, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
     SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, HWND_NOTOPMOST, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
     WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WS_OVERLAPPEDWINDOW, WS_POPUP, WS_VISIBLE,
     CreatePopupMenu, AppendMenuW, TrackPopupMenu, DestroyMenu, GetCursorPos, SetWindowLongPtrW,
@@ -298,10 +298,35 @@ pub fn log_to_file(msg: &str) {
     }
 }
 
-pub fn play_sound_warning() {
+pub fn play_warning_sound(sound: crate::config::WarningSound) {
+    use crate::config::WarningSound;
     unsafe {
-        MessageBeep(MB_ICONWARNING);
+        match sound {
+            WarningSound::Warning => {
+                MessageBeep(MB_ICONWARNING);
+            }
+            WarningSound::Info => {
+                MessageBeep(MB_ICONINFORMATION);
+            }
+            WarningSound::Alert => {
+                MessageBeep(MB_ICONHAND);
+            }
+            WarningSound::Question => {
+                MessageBeep(MB_ICONQUESTION);
+            }
+            WarningSound::DefaultBeep => {
+                MessageBeep(MB_OK);
+            }
+            WarningSound::Mute => {
+                // Silent
+            }
+        }
     }
+}
+
+#[allow(dead_code)]
+pub fn play_sound_warning() {
+    play_warning_sound(crate::config::WarningSound::Warning);
 }
 
 pub fn play_sound_info() {

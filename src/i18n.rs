@@ -83,6 +83,8 @@ pub fn tr(lang: Language, text: &'static str) -> &'static str {
         "Play Time (minutes):" => "Tiempo de Juego (minutos):",
         "Pause Time (minutes):" => "Tiempo de Pausa (minutos):",
         "Warning Time (seconds):" => "Tiempo de Advertencia (segundos):",
+        "Warning Sound:" => "Sonido de Advertencia:",
+        "▶ Test Sound" => "▶ Probar Sonido",
         "Screensaver Style:" => "Estilo de Salvapantallas:",
         "New Password (optional):" => "Nueva Contraseña (opcional):",
         "Enable Debug Logging:" => "Habilitar Registro de Depuración:",

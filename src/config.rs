@@ -199,6 +199,61 @@ fn default_science_difficulty() -> ScienceDifficulty {
     ScienceDifficulty::Medium
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WarningSound {
+    Warning,
+    Info,
+    Alert,
+    Question,
+    DefaultBeep,
+    Mute,
+}
+
+impl Default for WarningSound {
+    fn default() -> Self {
+        WarningSound::Warning
+    }
+}
+
+impl WarningSound {
+    pub fn all() -> &'static [WarningSound] {
+        &[
+            WarningSound::Warning,
+            WarningSound::Info,
+            WarningSound::Alert,
+            WarningSound::Question,
+            WarningSound::DefaultBeep,
+            WarningSound::Mute,
+        ]
+    }
+
+    #[allow(dead_code)]
+    pub fn name(&self) -> &'static str {
+        self.name_localized(Language::English)
+    }
+
+    pub fn name_localized(&self, lang: Language) -> &'static str {
+        match (lang, self) {
+            (Language::Spanish, WarningSound::Warning) => "Tono de Advertencia (Predeterminado)",
+            (Language::Spanish, WarningSound::Info) => "Campana Suave de Información (Alternativo)",
+            (Language::Spanish, WarningSound::Alert) => "Alerta Urgente",
+            (Language::Spanish, WarningSound::Question) => "Aviso Suave de Pregunta",
+            (Language::Spanish, WarningSound::DefaultBeep) => "Pitido Estándar del Sistema",
+            (Language::Spanish, WarningSound::Mute) => "Silencio / Desactivado",
+            (_, WarningSound::Warning) => "Warning Chime (Default)",
+            (_, WarningSound::Info) => "Gentle Info Chime (Alternate)",
+            (_, WarningSound::Alert) => "Urgent Alert",
+            (_, WarningSound::Question) => "Soft Question Prompt",
+            (_, WarningSound::DefaultBeep) => "Standard System Beep",
+            (_, WarningSound::Mute) => "Mute / Silent",
+        }
+    }
+}
+
+fn default_warning_sound() -> WarningSound {
+    WarningSound::Warning
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub play_time_minutes: u32,
@@ -212,6 +267,8 @@ pub struct AppSettings {
     pub enable_logging: bool,
     #[serde(default)]
     pub language: Language,
+    #[serde(default = "default_warning_sound")]
+    pub warning_sound: WarningSound,
     #[serde(default = "default_math_questions_needed")]
     pub math_questions_needed: u32,
     #[serde(default = "default_math_min_pause_percent")]
@@ -248,6 +305,7 @@ impl Default for AppSettings {
             password_hash: hash_password("1234"),
             enable_logging: false,
             language: Language::English,
+            warning_sound: WarningSound::Warning,
             math_questions_needed: 3,
             math_min_pause_percent: 50,
             math_difficulty: MathDifficulty::Medium,
@@ -393,5 +451,24 @@ mod tests {
         assert_eq!(loaded.geography_min_pause_percent, 30);
         assert_eq!(loaded.vocab_min_pause_percent, 30);
         assert_eq!(loaded.science_min_pause_percent, 30);
+    }
+
+    #[test]
+    fn test_warning_sound_default() {
+        let settings = AppSettings::default();
+        assert_eq!(settings.warning_sound, WarningSound::Warning);
+        assert_eq!(WarningSound::all().len(), 6);
+    }
+
+    #[test]
+    fn test_warning_sound_serialization() {
+        let settings = AppSettings::default();
+        let json = serde_json::to_string(&settings).unwrap();
+        let loaded: AppSettings = serde_json::from_str(&json).unwrap();
+        assert_eq!(loaded.warning_sound, WarningSound::Warning);
+
+        let custom_json = r#"{"play_time_minutes":30,"pause_time_minutes":5,"password_hash":"1234","warning_sound":"Info"}"#;
+        let custom_loaded: AppSettings = serde_json::from_str(custom_json).unwrap();
+        assert_eq!(custom_loaded.warning_sound, WarningSound::Info);
     }
 }

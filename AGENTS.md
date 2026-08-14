@@ -48,7 +48,11 @@ src/
 - **Check Compilation**: `cargo check`
 - **Run Tests**: `cargo test`
 - **Run Locally**: `cargo run`
+- **Run with Fast 30s Debug Timers**: `cargo run -- --debug` (or `cargo run -- -d`)
 - **Build Release Binary**: `cargo build --release`
+
+### Debug CLI Mode (`--debug` or `-d`)
+Passing `--debug` or `-d` overrides both unlock (play) duration and lock (pause) duration to 30 seconds (with warning threshold at 10s) for rapid developer testing. It operates completely in memory and does not modify or overwrite saved user settings in `%APPDATA%\interrupt\settings.json`.
 
 ## Critical Rules for Agents
 - **Roadmap Maintenance**: All new features must be present in `ROADMAP.md` and their implementation status (Proposed, In Progress, Implemented) MUST be maintained and kept up to date whenever features are added or completed.

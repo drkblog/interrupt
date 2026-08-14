@@ -5,7 +5,7 @@ mod i18n;
 mod screensaver;
 mod win32;
 
-use config::{AppSettings, GeographyDifficulty, MathDifficulty, ScienceDifficulty, VocabDifficulty};
+use config::{AppSettings, GeographyDifficulty, MathDifficulty, ScienceDifficulty, VocabDifficulty, WarningSound};
 use eframe::egui;
 use i18n::{get_geography_question_pool, get_science_question_pool, get_vocab_question_pool, tr, Language};
 use screensaver::{get_background_color, render_screensaver_style_localized, ScreensaverStyle};
@@ -42,10 +42,12 @@ pub struct InterruptApp {
     reset_error_message: Option<String>,
     show_pause_unblock_panel: bool,
     last_pause_interaction: Option<Instant>,
+    five_sec_sound_played: bool,
     
     // Tray icon integration
     tray_registered: bool,
     should_exit: bool,
+    debug_mode: bool,
 
     // Math exercises screensaver state
     math_problem_text: String,
@@ -97,10 +99,11 @@ pub struct InterruptApp {
     new_science_questions_needed: u32,
     new_science_min_pause_percent: u32,
     new_science_difficulty: ScienceDifficulty,
+    new_warning_sound: WarningSound,
 }
 
 impl InterruptApp {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, debug_mode: bool) -> Self {
         let settings = AppSettings::load();
         let new_play_time = settings.play_time_minutes;
         let new_pause_time = settings.pause_time_minutes;
@@ -120,6 +123,7 @@ impl InterruptApp {
         let new_science_questions_needed = settings.science_questions_needed;
         let new_science_min_pause_percent = settings.science_min_pause_percent;
         let new_science_difficulty = settings.science_difficulty;
+        let new_warning_sound = settings.warning_sound;
 
         win32::init_logging(settings.enable_logging);
         
@@ -222,19 +226,34 @@ impl InterruptApp {
             new_science_questions_needed,
             new_science_min_pause_percent,
             new_science_difficulty,
+            new_warning_sound,
+            five_sec_sound_played: false,
+            debug_mode,
         }
     }
 
     fn play_duration(&self) -> Duration {
-        Duration::from_secs((self.settings.play_time_minutes as u64) * 60)
+        if self.debug_mode {
+            Duration::from_secs(30)
+        } else {
+            Duration::from_secs((self.settings.play_time_minutes as u64) * 60)
+        }
     }
 
     fn pause_duration(&self) -> Duration {
-        Duration::from_secs((self.settings.pause_time_minutes as u64) * 60)
+        if self.debug_mode {
+            Duration::from_secs(30)
+        } else {
+            Duration::from_secs((self.settings.pause_time_minutes as u64) * 60)
+        }
     }
 
     fn warning_duration(&self) -> Duration {
-        Duration::from_secs(self.settings.warning_time_seconds as u64)
+        if self.debug_mode {
+            Duration::from_secs(10)
+        } else {
+            Duration::from_secs(self.settings.warning_time_seconds as u64)
+        }
     }
 
     fn generate_math_problem(&mut self) {
@@ -367,7 +386,7 @@ impl InterruptApp {
         }
 
         self.geography_question_index = self.geography_question_index.wrapping_add(1);
-        let idx = (self.geography_question_index + (ticks / 1000) as usize) % pool.len();
+        let idx = self.geography_question_index % pool.len();
         let item = &pool[idx];
 
         let mut choices = vec![
@@ -396,7 +415,7 @@ impl InterruptApp {
         }
 
         self.vocab_question_index = self.vocab_question_index.wrapping_add(1);
-        let idx = (self.vocab_question_index + (ticks / 1000) as usize) % pool.len();
+        let idx = self.vocab_question_index % pool.len();
         let item = &pool[idx];
 
         let mut choices = vec![
@@ -425,7 +444,7 @@ impl InterruptApp {
         }
 
         self.science_question_index = self.science_question_index.wrapping_add(1);
-        let idx = (self.science_question_index + (ticks / 1000) as usize) % pool.len();
+        let idx = self.science_question_index % pool.len();
         let item = &pool[idx];
 
         let mut choices = vec![
@@ -567,6 +586,7 @@ impl InterruptApp {
         self.new_science_questions_needed = self.settings.science_questions_needed;
         self.new_science_min_pause_percent = self.settings.science_min_pause_percent;
         self.new_science_difficulty = self.settings.science_difficulty;
+        self.new_warning_sound = self.settings.warning_sound;
         self.active_settings_tab = 0;
     }
 
@@ -605,11 +625,25 @@ impl InterruptApp {
                     self.transition_to_pause(ctx);
                 } else if elapsed >= warning_threshold {
                     self.state = AppState::Warning;
-                    win32::play_sound_warning();
+                    win32::play_warning_sound(self.settings.warning_sound);
+                    if self.warning_duration() <= Duration::from_secs(5) {
+                        self.five_sec_sound_played = true;
+                    }
                 }
             }
             AppState::Warning => {
                 let play_dur = self.play_duration();
+                let five_sec_threshold = if play_dur > Duration::from_secs(5) {
+                    play_dur - Duration::from_secs(5)
+                } else {
+                    Duration::from_secs(0)
+                };
+
+                if !self.five_sec_sound_played && elapsed >= five_sec_threshold && elapsed < play_dur {
+                    self.five_sec_sound_played = true;
+                    win32::play_warning_sound(self.settings.warning_sound);
+                }
+
                 if elapsed >= play_dur {
                     self.transition_to_pause(ctx);
                 }
@@ -621,28 +655,28 @@ impl InterruptApp {
                 } else if self.settings.screensaver_style == ScreensaverStyle::Math
                     && self.math_solved_count >= self.settings.math_questions_needed
                 {
-                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.math_min_pause_percent) / 100;
+                    let min_dur_sec = ((self.pause_duration().as_secs() as u32) * self.settings.math_min_pause_percent) / 100;
                     if elapsed.as_secs() >= min_dur_sec as u64 {
                         self.transition_to_play(ctx, "math exercises complete & min duration met");
                     }
                 } else if self.settings.screensaver_style == ScreensaverStyle::Geography
                     && self.geography_solved_count >= self.settings.geography_questions_needed
                 {
-                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.geography_min_pause_percent) / 100;
+                    let min_dur_sec = ((self.pause_duration().as_secs() as u32) * self.settings.geography_min_pause_percent) / 100;
                     if elapsed.as_secs() >= min_dur_sec as u64 {
                         self.transition_to_play(ctx, "geography exercises complete & min duration met");
                     }
                 } else if self.settings.screensaver_style == ScreensaverStyle::Vocab
                     && self.vocab_solved_count >= self.settings.vocab_questions_needed
                 {
-                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.vocab_min_pause_percent) / 100;
+                    let min_dur_sec = ((self.pause_duration().as_secs() as u32) * self.settings.vocab_min_pause_percent) / 100;
                     if elapsed.as_secs() >= min_dur_sec as u64 {
                         self.transition_to_play(ctx, "vocab exercises complete & min duration met");
                     }
                 } else if self.settings.screensaver_style == ScreensaverStyle::Science
                     && self.science_solved_count >= self.settings.science_questions_needed
                 {
-                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.science_min_pause_percent) / 100;
+                    let min_dur_sec = ((self.pause_duration().as_secs() as u32) * self.settings.science_min_pause_percent) / 100;
                     if elapsed.as_secs() >= min_dur_sec as u64 {
                         self.transition_to_play(ctx, "science exercises complete & min duration met");
                     }
@@ -662,6 +696,7 @@ impl InterruptApp {
         self.show_pause_unblock_panel = false;
         self.focus_password_field = false;
         self.last_pause_interaction = None;
+        self.five_sec_sound_played = false;
 
         self.math_solved_count = 0;
         self.math_feedback = None;
@@ -698,6 +733,7 @@ impl InterruptApp {
         self.password_error = None;
         self.show_pause_unblock_panel = false;
         self.last_pause_interaction = None;
+        self.five_sec_sound_played = false;
 
         win32::log_to_file("[DEBUG] transition_to_play: sending Fullscreen(false), Normal level, size 640x560");
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(false));
@@ -722,6 +758,7 @@ impl InterruptApp {
         if self.settings.verify_password(&self.reset_password_input) {
             self.state = AppState::Play;
             self.state_start = Instant::now();
+            self.five_sec_sound_played = false;
             self.show_reset_dialog = false;
             self.reset_password_input.clear();
             self.reset_error_message = None;
@@ -870,13 +907,13 @@ impl InterruptApp {
                                     );
                                     ui.add_space(16.0);
 
-                                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.math_min_pause_percent) / 100;
+                                    let min_dur_sec = ((self.pause_duration().as_secs() as u32) * self.settings.math_min_pause_percent) / 100;
                                     let elapsed_sec = self.state_start.elapsed().as_secs();
 
                                     self.draw_circular_timer(
                                         ui,
                                         elapsed_sec as f32,
-                                        (self.settings.pause_time_minutes * 60) as f32,
+                                        self.pause_duration().as_secs() as f32,
                                         min_dur_sec as f32,
                                     );
                                     ui.add_space(20.0);
@@ -1009,13 +1046,13 @@ impl InterruptApp {
                                     );
                                     ui.add_space(16.0);
 
-                                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.geography_min_pause_percent) / 100;
+                                    let min_dur_sec = ((self.pause_duration().as_secs() as u32) * self.settings.geography_min_pause_percent) / 100;
                                     let elapsed_sec = self.state_start.elapsed().as_secs();
 
                                     self.draw_circular_timer(
                                         ui,
                                         elapsed_sec as f32,
-                                        (self.settings.pause_time_minutes * 60) as f32,
+                                        self.pause_duration().as_secs() as f32,
                                         min_dur_sec as f32,
                                     );
                                     ui.add_space(20.0);
@@ -1154,13 +1191,13 @@ impl InterruptApp {
                                     );
                                     ui.add_space(16.0);
 
-                                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.vocab_min_pause_percent) / 100;
+                                    let min_dur_sec = ((self.pause_duration().as_secs() as u32) * self.settings.vocab_min_pause_percent) / 100;
                                     let elapsed_sec = self.state_start.elapsed().as_secs();
 
                                     self.draw_circular_timer(
                                         ui,
                                         elapsed_sec as f32,
-                                        (self.settings.pause_time_minutes * 60) as f32,
+                                        self.pause_duration().as_secs() as f32,
                                         min_dur_sec as f32,
                                     );
                                     ui.add_space(20.0);
@@ -1299,13 +1336,13 @@ impl InterruptApp {
                                     );
                                     ui.add_space(16.0);
 
-                                    let min_dur_sec = ((self.settings.pause_time_minutes * 60) * self.settings.science_min_pause_percent) / 100;
+                                    let min_dur_sec = ((self.pause_duration().as_secs() as u32) * self.settings.science_min_pause_percent) / 100;
                                     let elapsed_sec = self.state_start.elapsed().as_secs();
 
                                     self.draw_circular_timer(
                                         ui,
                                         elapsed_sec as f32,
-                                        (self.settings.pause_time_minutes * 60) as f32,
+                                        self.pause_duration().as_secs() as f32,
                                         min_dur_sec as f32,
                                     );
                                     ui.add_space(20.0);
@@ -1658,6 +1695,26 @@ impl InterruptApp {
                                         );
                                         ui.end_row();
 
+                                        ui.label(tr(self.settings.language, "Warning Sound:"));
+                                        ui.horizontal(|ui| {
+                                            egui::ComboBox::from_id_source("warning_sound_selector")
+                                                .selected_text(self.new_warning_sound.name_localized(self.new_language))
+                                                .width(180.0)
+                                                .show_ui(ui, |ui| {
+                                                    for sound in WarningSound::all() {
+                                                        ui.selectable_value(
+                                                            &mut self.new_warning_sound,
+                                                            *sound,
+                                                            sound.name_localized(self.new_language),
+                                                        );
+                                                    }
+                                                });
+                                            if ui.button(tr(self.settings.language, "▶ Test Sound")).clicked() {
+                                                win32::play_warning_sound(self.new_warning_sound);
+                                            }
+                                        });
+                                        ui.end_row();
+
                                         ui.label(tr(self.settings.language, "Screensaver Style:"));
                                         egui::ComboBox::from_id_source("screensaver_style_selector")
                                             .selected_text(self.new_screensaver_style.name_localized(self.new_language))
@@ -1835,6 +1892,7 @@ impl InterruptApp {
                                     self.settings.science_questions_needed = self.new_science_questions_needed;
                                     self.settings.science_min_pause_percent = self.new_science_min_pause_percent;
                                     self.settings.science_difficulty = self.new_science_difficulty;
+                                    self.settings.warning_sound = self.new_warning_sound;
                                     win32::init_logging(self.new_enable_logging);
                                     if !self.new_password_input.trim().is_empty() {
                                         self.settings.set_password(&self.new_password_input);
@@ -2098,13 +2156,17 @@ impl eframe::App for InterruptApp {
                     
                     // Info pills / badges (Dynamically Centered)
                     ui.horizontal(|ui| {
-                        let info_items = vec![
+                        let mut info_items = vec![
                             (format!("{}: {} {}", tr(self.settings.language, "Play:"), self.settings.play_time_minutes, tr(self.settings.language, "min")), egui::Color32::from_rgb(56, 189, 248)),
                             (format!("{}: {} {}", tr(self.settings.language, "Break:"), self.settings.pause_time_minutes, tr(self.settings.language, "min")), egui::Color32::from_rgb(168, 85, 247)),
                             (format!("Warn: {}s", self.settings.warning_time_seconds), egui::Color32::from_rgb(244, 63, 94)),
                             (format!("{}: {}", tr(self.settings.language, "Style:"), self.settings.screensaver_style.name_localized(self.settings.language).split(' ').next().unwrap_or("")), egui::Color32::from_rgb(52, 211, 153)),
                             ("Master PW: On".to_string(), egui::Color32::from_rgb(148, 163, 184)),
                         ];
+
+                        if self.debug_mode {
+                            info_items.insert(0, ("[DEBUG MODE: 30s/30s]".to_string(), egui::Color32::from_rgb(251, 146, 60)));
+                        }
 
                         let approx_badges_width = 460.0;
                         let space = (ui.available_width() - approx_badges_width) / 2.0;
@@ -2159,9 +2221,14 @@ impl Drop for InterruptApp {
 
 fn main() -> eframe::Result<()> {
     win32::log_to_file("[LOG] main: Starting eframe application");
+    let args: Vec<String> = std::env::args().collect();
+    let debug_mode = args.iter().any(|arg| arg == "--debug" || arg == "-d");
+    if debug_mode {
+        win32::log_to_file("[LOG] main: --debug flag active. Setting play and pause duration to 30 seconds.");
+    }
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("Interrupt - Healthy Screen Breaks")
+            .with_title(if debug_mode { "Interrupt [DEBUG MODE - 30s]" } else { "Interrupt - Healthy Screen Breaks" })
             .with_inner_size([640.0, 560.0])
             .with_resizable(false),
         ..Default::default()
@@ -2170,7 +2237,7 @@ fn main() -> eframe::Result<()> {
     let res = eframe::run_native(
         "Interrupt",
         options,
-        Box::new(|cc| Ok(Box::new(InterruptApp::new(cc)))),
+        Box::new(move |cc| Ok(Box::new(InterruptApp::new(cc, debug_mode)))),
     );
     win32::log_to_file(&format!("[LOG] main: eframe::run_native returned: {:?}", res));
     res
@@ -2183,6 +2250,10 @@ mod tests {
     use i18n::Language;
 
     fn create_test_app(settings: AppSettings) -> InterruptApp {
+        create_test_app_with_debug(settings, false)
+    }
+
+    fn create_test_app_with_debug(settings: AppSettings, debug_mode: bool) -> InterruptApp {
         InterruptApp {
             settings: settings.clone(),
             state: AppState::Play,
@@ -2209,6 +2280,7 @@ mod tests {
             last_pause_interaction: None,
             tray_registered: false,
             should_exit: false,
+            debug_mode,
             math_problem_text: String::new(),
             math_problem_answer: 0,
             math_user_input: String::new(),
@@ -2251,6 +2323,8 @@ mod tests {
             new_science_questions_needed: settings.science_questions_needed,
             new_science_min_pause_percent: settings.science_min_pause_percent,
             new_science_difficulty: settings.science_difficulty,
+            new_warning_sound: settings.warning_sound,
+            five_sec_sound_played: false,
         }
     }
 
@@ -2331,6 +2405,43 @@ mod tests {
             first_q, second_q,
             "Consecutive calls to generate_vocab_problem should rotate questions"
         );
+    }
+
+    #[test]
+    fn test_warning_sound_settings_and_flags() {
+        let settings = AppSettings::default();
+        let mut app = create_test_app(settings);
+
+        assert_eq!(app.new_warning_sound, WarningSound::Warning);
+        assert!(!app.five_sec_sound_played);
+
+        app.new_warning_sound = WarningSound::Info;
+        app.five_sec_sound_played = true;
+
+        // Verify state reset on reset timer
+        app.settings.set_password("1234");
+        app.reset_password_input = "1234".to_string();
+        app.try_reset_timer();
+
+        assert!(!app.five_sec_sound_played);
+        assert_eq!(app.state, AppState::Play);
+    }
+
+    #[test]
+    fn test_debug_mode_durations() {
+        let settings = AppSettings::default();
+        let app_normal = create_test_app_with_debug(settings.clone(), false);
+        assert_eq!(app_normal.play_duration(), Duration::from_secs(30 * 60));
+        assert_eq!(app_normal.pause_duration(), Duration::from_secs(5 * 60));
+        assert_eq!(app_normal.warning_duration(), Duration::from_secs(30));
+
+        let app_debug = create_test_app_with_debug(settings.clone(), true);
+        assert_eq!(app_debug.play_duration(), Duration::from_secs(30));
+        assert_eq!(app_debug.pause_duration(), Duration::from_secs(30));
+        assert_eq!(app_debug.warning_duration(), Duration::from_secs(10));
+        // Ensure underlying settings remain untouched
+        assert_eq!(app_debug.settings.play_time_minutes, 30);
+        assert_eq!(app_debug.settings.pause_time_minutes, 5);
     }
 }
 

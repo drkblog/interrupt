@@ -7,7 +7,7 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
 | Feature ID | Feature Name | State |
 |---|---|---|
 | FT-01 | Custom Screensaver Parameter Configuration | Proposed |
-| FT-02 | Audio Notifications and Relaxing Chimes | Proposed |
+| FT-02 | Audio Notifications and Relaxing Chimes | Implemented |
 | FT-03 | Local Break Analytics and Compliance Logging | Proposed |
 | FT-04 | System Tray Integration and Minimize-to-Tray | Implemented |
 | FT-05 | Math Lock Screen | Implemented |
