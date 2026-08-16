@@ -94,6 +94,7 @@ pub struct InterruptApp {
     pronunciation_feedback: Option<String>,
     pronunciation_feedback_color: egui::Color32,
     pronunciation_question_index: usize,
+    pronunciation_next_question_at: Option<Instant>,
 
     active_settings_tab: usize,
     new_language: Language,
@@ -243,6 +244,7 @@ impl InterruptApp {
             pronunciation_feedback: None,
             pronunciation_feedback_color: egui::Color32::LIGHT_GRAY,
             pronunciation_question_index: init_rand_seed.wrapping_add(53),
+            pronunciation_next_question_at: None,
             active_settings_tab: 0,
             new_language,
             new_math_questions_needed,
@@ -802,6 +804,7 @@ impl InterruptApp {
 
         self.pronunciation_solved_count = 0;
         self.pronunciation_feedback = None;
+        self.pronunciation_next_question_at = None;
         self.generate_pronunciation_problem();
 
         let rect = win32::get_virtual_screen_rect();
@@ -1593,6 +1596,15 @@ impl InterruptApp {
                                     );
                                     ui.add_space(20.0);
 
+                                    if let Some(scheduled_time) = self.pronunciation_next_question_at {
+                                        if Instant::now() >= scheduled_time {
+                                            self.pronunciation_next_question_at = None;
+                                            self.generate_pronunciation_problem();
+                                        } else {
+                                            ctx.request_repaint_after(Duration::from_millis(50));
+                                        }
+                                    }
+
                                     if self.pronunciation_solved_count >= total_needed {
                                         ui.label(
                                             egui::RichText::new("🎉 All questions solved!")
@@ -1614,15 +1626,18 @@ impl InterruptApp {
                                         );
                                         ui.add_space(12.0);
 
+                                        let is_waiting = self.pronunciation_next_question_at.is_some();
+
                                         // Audio Playback / Replay Button
-                                        if ui.add_sized(
-                                            [240.0, 42.0],
+                                        if ui.add_enabled(
+                                            !is_waiting,
                                             egui::Button::new(
                                                 egui::RichText::new(tr(self.settings.language, "🔊 Listen / Replay Audio"))
                                                     .size(16.0)
                                                     .strong()
                                                     .color(egui::Color32::WHITE)
                                             )
+                                            .min_size(egui::vec2(240.0, 42.0))
                                             .fill(egui::Color32::from_rgb(147, 51, 234))
                                         ).clicked() {
                                             let repeat_slow = self.settings.pronunciation_difficulty == PronunciationDifficulty::Low
@@ -1637,27 +1652,29 @@ impl InterruptApp {
                                         ui.add_space(18.0);
 
                                         let mut selected_choice: Option<usize> = None;
-                                        egui::Grid::new("pronunciation_choices_grid")
-                                            .num_columns(3)
-                                            .spacing([12.0, 10.0])
-                                            .show(ui, |ui| {
-                                                for (idx, choice) in self.pronunciation_choices.iter().enumerate() {
-                                                    let btn = ui.add_sized(
-                                                        [136.0, 40.0],
-                                                        egui::Button::new(
-                                                            egui::RichText::new(format!("{}. {}", idx + 1, choice))
-                                                                .size(15.0)
-                                                                .strong()
-                                                        )
-                                                    );
-                                                    if btn.clicked() {
-                                                        selected_choice = Some(idx);
+                                        ui.add_enabled_ui(!is_waiting, |ui| {
+                                            egui::Grid::new("pronunciation_choices_grid")
+                                                .num_columns(3)
+                                                .spacing([12.0, 10.0])
+                                                .show(ui, |ui| {
+                                                    for (idx, choice) in self.pronunciation_choices.iter().enumerate() {
+                                                        let btn = ui.add_sized(
+                                                            [136.0, 40.0],
+                                                            egui::Button::new(
+                                                                egui::RichText::new(format!("{}. {}", idx + 1, choice))
+                                                                    .size(15.0)
+                                                                    .strong()
+                                                            )
+                                                        );
+                                                        if btn.clicked() {
+                                                            selected_choice = Some(idx);
+                                                        }
                                                     }
-                                                }
-                                                ui.end_row();
-                                            });
+                                                    ui.end_row();
+                                                });
+                                        });
 
-                                        if selected_choice.is_none() {
+                                        if !is_waiting && selected_choice.is_none() {
                                             for idx in 0..self.pronunciation_choices.len() {
                                                 let key = match idx {
                                                     0 => egui::Key::Num1,
@@ -1686,7 +1703,7 @@ impl InterruptApp {
                                                     let hint_prefix = tr(self.settings.language, "✅ Correct! Phonetic Hint: ");
                                                     self.pronunciation_feedback = Some(format!("{}{}", hint_prefix, self.pronunciation_phonetic_hint));
                                                     self.pronunciation_feedback_color = egui::Color32::from_rgb(52, 211, 153);
-                                                    self.generate_pronunciation_problem();
+                                                    self.pronunciation_next_question_at = Some(Instant::now() + Duration::from_millis(1500));
                                                 }
                                             } else {
                                                 self.pronunciation_feedback = Some(tr(self.settings.language, "❌ Incorrect choice, try listening again!").to_string());
@@ -2652,6 +2669,7 @@ mod tests {
             pronunciation_feedback: None,
             pronunciation_feedback_color: egui::Color32::LIGHT_GRAY,
             pronunciation_question_index: 0,
+            pronunciation_next_question_at: None,
             active_settings_tab: 0,
             new_language: settings.language,
             new_math_questions_needed: settings.math_questions_needed,
