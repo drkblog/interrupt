@@ -117,9 +117,15 @@ pub fn tr(lang: Language, text: &'static str) -> &'static str {
         "pronunciation_title" => "🔊 Quiz de Pronunciación en Inglés",
         "🔊 English Pronunciation Quiz" => "🔊 Quiz de Pronunciación en Inglés",
         "pronunciation_instructions" => "Escucha con atención la voz en inglés y selecciona la palabra correcta:",
+        "Listen carefully to the audio and select the word that was pronounced:" => "Escucha con atención la voz en inglés y selecciona la palabra pronunciada:",
         "pronunciation_listen" => "🔊 Escuchar / Repetir Audio",
+        "🔊 Listen / Replay Audio" => "🔊 Escuchar / Repetir Audio",
         "pronunciation_correct" => "✅ ¡Correcto! Pista fonética: ",
+        "✅ Correct! Phonetic Hint: " => "✅ ¡Correcto! Pista fonética: ",
         "pronunciation_incorrect" => "❌ Selección incorrecta. Escucha de nuevo e inténtalo otra vez.",
+        "❌ Incorrect choice, try listening again!" => "❌ Selección incorrecta. Escucha de nuevo e inténtalo otra vez.",
+        "Speech Audio Volume (%):" => "Volumen de la Voz (%):",
+        "▶ Test Audio Volume" => "▶ Probar Volumen de Voz",
         "🧮 Math Quiz" => "🧮 Quiz de Matemáticas",
 
         // Exercise Cards & Quiz Overlay

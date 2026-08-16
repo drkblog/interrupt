@@ -309,6 +309,10 @@ fn default_warning_sound() -> WarningSound {
     WarningSound::Warning
 }
 
+fn default_speech_volume() -> u32 {
+    100
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppSettings {
     pub play_time_minutes: u32,
@@ -354,6 +358,8 @@ pub struct AppSettings {
     pub pronunciation_min_pause_percent: u32,
     #[serde(default = "default_pronunciation_difficulty")]
     pub pronunciation_difficulty: PronunciationDifficulty,
+    #[serde(default = "default_speech_volume")]
+    pub speech_volume: u32,
 }
 
 impl Default for AppSettings {
@@ -382,6 +388,7 @@ impl Default for AppSettings {
             pronunciation_questions_needed: 3,
             pronunciation_min_pause_percent: 50,
             pronunciation_difficulty: PronunciationDifficulty::Medium,
+            speech_volume: 100,
         }
     }
 }
@@ -397,6 +404,7 @@ impl AppSettings {
                         settings.vocab_min_pause_percent = settings.vocab_min_pause_percent.clamp(30, 100);
                         settings.science_min_pause_percent = settings.science_min_pause_percent.clamp(30, 100);
                         settings.pronunciation_min_pause_percent = settings.pronunciation_min_pause_percent.clamp(30, 100);
+                        settings.speech_volume = settings.speech_volume.clamp(0, 100);
                         return settings;
                     }
                 }
@@ -507,19 +515,22 @@ mod tests {
         assert_eq!(settings.vocab_min_pause_percent, 50);
         assert_eq!(settings.science_min_pause_percent, 50);
         assert_eq!(settings.pronunciation_min_pause_percent, 50);
+        assert_eq!(settings.speech_volume, 100);
 
-        let json = r#"{"play_time_minutes":30,"pause_time_minutes":5,"password_hash":"1234","math_min_pause_percent":10,"geography_min_pause_percent":5,"vocab_min_pause_percent":2,"science_min_pause_percent":1,"pronunciation_min_pause_percent":4}"#;
+        let json = r#"{"play_time_minutes":30,"pause_time_minutes":5,"password_hash":"1234","math_min_pause_percent":10,"geography_min_pause_percent":5,"vocab_min_pause_percent":2,"science_min_pause_percent":1,"pronunciation_min_pause_percent":4,"speech_volume":80}"#;
         let mut loaded: AppSettings = serde_json::from_str(json).unwrap();
         loaded.math_min_pause_percent = loaded.math_min_pause_percent.clamp(30, 100);
         loaded.geography_min_pause_percent = loaded.geography_min_pause_percent.clamp(30, 100);
         loaded.vocab_min_pause_percent = loaded.vocab_min_pause_percent.clamp(30, 100);
         loaded.science_min_pause_percent = loaded.science_min_pause_percent.clamp(30, 100);
         loaded.pronunciation_min_pause_percent = loaded.pronunciation_min_pause_percent.clamp(30, 100);
+        loaded.speech_volume = loaded.speech_volume.clamp(0, 100);
         assert_eq!(loaded.math_min_pause_percent, 30);
         assert_eq!(loaded.geography_min_pause_percent, 30);
         assert_eq!(loaded.vocab_min_pause_percent, 30);
         assert_eq!(loaded.science_min_pause_percent, 30);
         assert_eq!(loaded.pronunciation_min_pause_percent, 30);
+        assert_eq!(loaded.speech_volume, 80);
     }
 
     #[test]

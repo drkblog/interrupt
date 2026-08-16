@@ -112,6 +112,7 @@ pub struct InterruptApp {
     new_pronunciation_questions_needed: u32,
     new_pronunciation_min_pause_percent: u32,
     new_pronunciation_difficulty: PronunciationDifficulty,
+    new_speech_volume: u32,
     new_warning_sound: WarningSound,
 }
 
@@ -139,6 +140,7 @@ impl InterruptApp {
         let new_pronunciation_questions_needed = settings.pronunciation_questions_needed;
         let new_pronunciation_min_pause_percent = settings.pronunciation_min_pause_percent;
         let new_pronunciation_difficulty = settings.pronunciation_difficulty;
+        let new_speech_volume = settings.speech_volume;
         let new_warning_sound = settings.warning_sound;
 
         win32::init_logging(settings.enable_logging);
@@ -253,6 +255,7 @@ impl InterruptApp {
             new_pronunciation_questions_needed,
             new_pronunciation_min_pause_percent,
             new_pronunciation_difficulty,
+            new_speech_volume,
             new_warning_sound,
             five_sec_sound_played: false,
             debug_mode,
@@ -505,7 +508,7 @@ impl InterruptApp {
         self.pronunciation_phonetic_hint = item.phonetic_hint.clone();
         self.pronunciation_feedback = None;
 
-        win32::speak_text_async(&self.pronunciation_word_to_speak);
+        win32::speak_text_async_with_volume(&self.pronunciation_word_to_speak, self.settings.speech_volume);
     }
 
     fn draw_circular_timer(
@@ -1529,7 +1532,7 @@ impl InterruptApp {
                                 ui.set_max_width(480.0);
                                 ui.vertical_centered(|ui| {
                                     ui.label(
-                                        egui::RichText::new(tr(self.settings.language, "pronunciation_title"))
+                                        egui::RichText::new(tr(self.settings.language, "🔊 English Pronunciation Quiz"))
                                             .size(24.0)
                                             .strong()
                                             .color(egui::Color32::from_rgb(192, 132, 252)),
@@ -1575,7 +1578,7 @@ impl InterruptApp {
                                         );
                                     } else {
                                         ui.label(
-                                            egui::RichText::new(tr(self.settings.language, "pronunciation_instructions"))
+                                            egui::RichText::new(tr(self.settings.language, "Listen carefully to the audio and select the word that was pronounced:"))
                                                 .size(15.0)
                                                 .color(egui::Color32::from_rgb(226, 232, 240)),
                                         );
@@ -1585,14 +1588,14 @@ impl InterruptApp {
                                         if ui.add_sized(
                                             [240.0, 42.0],
                                             egui::Button::new(
-                                                egui::RichText::new(tr(self.settings.language, "pronunciation_listen"))
+                                                egui::RichText::new(tr(self.settings.language, "🔊 Listen / Replay Audio"))
                                                     .size(16.0)
                                                     .strong()
                                                     .color(egui::Color32::WHITE)
                                             )
                                             .fill(egui::Color32::from_rgb(147, 51, 234))
                                         ).clicked() {
-                                            win32::speak_text_async(&self.pronunciation_word_to_speak);
+                                            win32::speak_text_async_with_volume(&self.pronunciation_word_to_speak, self.settings.speech_volume);
                                         }
 
                                         ui.add_space(18.0);
@@ -1644,13 +1647,13 @@ impl InterruptApp {
                                                         self.pronunciation_feedback_color = egui::Color32::from_rgb(52, 211, 153);
                                                     }
                                                 } else {
-                                                    let hint_prefix = tr(self.settings.language, "pronunciation_correct");
+                                                    let hint_prefix = tr(self.settings.language, "✅ Correct! Phonetic Hint: ");
                                                     self.pronunciation_feedback = Some(format!("{}{}", hint_prefix, self.pronunciation_phonetic_hint));
                                                     self.pronunciation_feedback_color = egui::Color32::from_rgb(52, 211, 153);
                                                     self.generate_pronunciation_problem();
                                                 }
                                             } else {
-                                                self.pronunciation_feedback = Some(tr(self.settings.language, "pronunciation_incorrect").to_string());
+                                                self.pronunciation_feedback = Some(tr(self.settings.language, "❌ Incorrect choice, try listening again!").to_string());
                                                 self.pronunciation_feedback_color = egui::Color32::from_rgb(248, 113, 113);
                                             }
                                         }
@@ -2106,6 +2109,15 @@ impl InterruptApp {
                                                         }
                                                     });
                                                 ui.end_row();
+
+                                                ui.label(tr(self.settings.language, "Speech Audio Volume (%):"));
+                                                ui.horizontal(|ui| {
+                                                    ui.add_sized([100.0, 22.0], egui::Slider::new(&mut self.new_speech_volume, 0..=100));
+                                                    if ui.button(tr(self.settings.language, "▶ Test Audio Volume")).clicked() {
+                                                        win32::speak_text_async_with_volume("Testing audio volume.", self.new_speech_volume);
+                                                    }
+                                                });
+                                                ui.end_row();
                                             });
                                     }
                                     _ => {
@@ -2140,6 +2152,7 @@ impl InterruptApp {
                                     self.settings.pronunciation_questions_needed = self.new_pronunciation_questions_needed;
                                     self.settings.pronunciation_min_pause_percent = self.new_pronunciation_min_pause_percent;
                                     self.settings.pronunciation_difficulty = self.new_pronunciation_difficulty;
+                                    self.settings.speech_volume = self.new_speech_volume;
                                     self.settings.warning_sound = self.new_warning_sound;
                                     win32::init_logging(self.new_enable_logging);
                                     if !self.new_password_input.trim().is_empty() {
@@ -2620,6 +2633,7 @@ mod tests {
             new_pronunciation_questions_needed: settings.pronunciation_questions_needed,
             new_pronunciation_min_pause_percent: settings.pronunciation_min_pause_percent,
             new_pronunciation_difficulty: settings.pronunciation_difficulty,
+            new_speech_volume: settings.speech_volume,
             new_warning_sound: settings.warning_sound,
             five_sec_sound_played: false,
         }
