@@ -15,6 +15,7 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
 | FT-07 | Country Flags & Geography Trivia Lock Screen | Implemented |
 | FT-08 | Science & Nature Trivia Lock Screen | Implemented |
 | FT-09 | Responsive Centered Info Badges Layout | Implemented |
+| FT-10 | English Pronunciation Lock Screen | Proposed |
 
 ---
 
@@ -84,3 +85,16 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
   - Prevents horizontal badge overflow on narrow window widths or when running in debug mode or under localized long strings.
   - Maintains clean aesthetic alignment with all rows centered horizontally.
 * **Implementation Plan**: Measure text widths via egui painter layout prior to rendering, pack badges into fitted rows, and apply horizontal padding to center each row.
+
+### FT-10: English Pronunciation Lock Screen
+* **Description**: Introduce an auditory English pronunciation challenge on the pause screen. The user is presented with three word options while one of the words is pronounced aloud via audio synthesis or pre-recorded clips. The user must listen and select the correct word corresponding to the spoken pronunciation.
+* **Difficulty Levels**:
+  - **Low (Beginner)**: Simple, phonetically distinct high-frequency words with contrasting vowel and consonant sounds (e.g., `cat`, `dog`, `sun`).
+  - **Medium (Intermediate)**: Similar sounding words, minimal pairs, and common homophones (e.g., `ship` / `sheep`, `bare` / `bear`, `desk` / `disk`).
+  - **High (Advanced)**: Multi-syllable vocabulary, silent letters, and subtle vowel/consonant distinctions (e.g., `receipt` / `deceit` / `conceit`, `subtle` / `suttle` / `supple`).
+  - **Expert**: Complex academic/technical terminology, homographs, fast native speech cadence, and subtle accent/stress variations (e.g., `anemone` / `amnezie` / `aluminum`, `cache` / `cash` / `catch`).
+* **Configurable Parameters & Time Savings**:
+  - Configurable minimum number of questions required per break session.
+  - Configurable percentage of break wait time saved upon successful completion (identical to the Math Lock Screen mechanics).
+* **Implementation Plan**: Leverage Windows native text-to-speech APIs (SAPI / SpeechSynthesis) or bundled audio samples along with a curated database of word option triplets and phonetic minimal pairs. Render an interactive audio replay button and 3 choice cards on the pause screen overlay.
+
