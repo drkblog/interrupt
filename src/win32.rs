@@ -645,18 +645,27 @@ pub fn unregister_tray_icon() {
 
 #[allow(dead_code)]
 pub fn speak_text_async(text: &str) {
-    speak_text_async_with_volume(text, 100);
+    speak_text_async_with_volume(text, 100, false);
 }
 
-pub fn speak_text_async_with_volume(text: &str, volume: u32) {
+pub fn speak_text_async_with_volume(text: &str, volume: u32, play_slow_repeat: bool) {
     let word = text.to_string();
     let vol = volume.clamp(0, 100);
     std::thread::spawn(move || {
-        let script = format!(
-            "Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Volume = {}; $s.Speak('{}')",
-            vol,
-            word.replace('\'', "''")
-        );
+        let script = if play_slow_repeat {
+            format!(
+                "Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Volume = {}; $s.Rate = 0; $s.Speak('{}'); Start-Sleep -Milliseconds 400; $s.Rate = -3; $s.Speak('{}')",
+                vol,
+                word.replace('\'', "''"),
+                word.replace('\'', "''")
+            )
+        } else {
+            format!(
+                "Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Volume = {}; $s.Rate = 0; $s.Speak('{}')",
+                vol,
+                word.replace('\'', "''")
+            )
+        };
         let _ = std::process::Command::new("powershell")
             .args(["-NoProfile", "-NonInteractive", "-Command", &script])
             .output();

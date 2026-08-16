@@ -508,7 +508,13 @@ impl InterruptApp {
         self.pronunciation_phonetic_hint = item.phonetic_hint.clone();
         self.pronunciation_feedback = None;
 
-        win32::speak_text_async_with_volume(&self.pronunciation_word_to_speak, self.settings.speech_volume);
+        let repeat_slow = self.settings.pronunciation_difficulty == PronunciationDifficulty::Low
+            || self.settings.pronunciation_difficulty == PronunciationDifficulty::Medium;
+        win32::speak_text_async_with_volume(
+            &self.pronunciation_word_to_speak,
+            self.settings.speech_volume,
+            repeat_slow,
+        );
     }
 
     fn draw_circular_timer(
@@ -1595,7 +1601,13 @@ impl InterruptApp {
                                             )
                                             .fill(egui::Color32::from_rgb(147, 51, 234))
                                         ).clicked() {
-                                            win32::speak_text_async_with_volume(&self.pronunciation_word_to_speak, self.settings.speech_volume);
+                                            let repeat_slow = self.settings.pronunciation_difficulty == PronunciationDifficulty::Low
+                                                || self.settings.pronunciation_difficulty == PronunciationDifficulty::Medium;
+                                            win32::speak_text_async_with_volume(
+                                                &self.pronunciation_word_to_speak,
+                                                self.settings.speech_volume,
+                                                repeat_slow,
+                                            );
                                         }
 
                                         ui.add_space(18.0);
@@ -2114,7 +2126,7 @@ impl InterruptApp {
                                                 ui.horizontal(|ui| {
                                                     ui.add_sized([100.0, 22.0], egui::Slider::new(&mut self.new_speech_volume, 0..=100));
                                                     if ui.button(tr(self.settings.language, "▶ Test Audio Volume")).clicked() {
-                                                        win32::speak_text_async_with_volume("Testing audio volume.", self.new_speech_volume);
+                                                        win32::speak_text_async_with_volume("Testing audio volume.", self.new_speech_volume, false);
                                                     }
                                                 });
                                                 ui.end_row();
