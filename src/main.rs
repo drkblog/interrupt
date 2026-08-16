@@ -5,9 +5,9 @@ mod i18n;
 mod screensaver;
 mod win32;
 
-use config::{AppSettings, GeographyDifficulty, MathDifficulty, ScienceDifficulty, VocabDifficulty, WarningSound};
+use config::{AppSettings, GeographyDifficulty, MathDifficulty, PronunciationDifficulty, ScienceDifficulty, VocabDifficulty, WarningSound};
 use eframe::egui;
-use i18n::{get_geography_question_pool, get_science_question_pool, get_vocab_question_pool, tr, Language};
+use i18n::{get_geography_question_pool, get_pronunciation_question_pool, get_science_question_pool, get_vocab_question_pool, tr, Language};
 use screensaver::{get_background_color, render_screensaver_style_localized, ScreensaverStyle};
 use std::time::{Duration, Instant};
 
@@ -85,6 +85,16 @@ pub struct InterruptApp {
     science_feedback_color: egui::Color32,
     science_question_index: usize,
 
+    // English Pronunciation exercises screensaver state
+    pronunciation_word_to_speak: String,
+    pronunciation_choices: Vec<String>,
+    pronunciation_correct_idx: usize,
+    pronunciation_phonetic_hint: String,
+    pronunciation_solved_count: u32,
+    pronunciation_feedback: Option<String>,
+    pronunciation_feedback_color: egui::Color32,
+    pronunciation_question_index: usize,
+
     active_settings_tab: usize,
     new_language: Language,
     new_math_questions_needed: u32,
@@ -99,6 +109,9 @@ pub struct InterruptApp {
     new_science_questions_needed: u32,
     new_science_min_pause_percent: u32,
     new_science_difficulty: ScienceDifficulty,
+    new_pronunciation_questions_needed: u32,
+    new_pronunciation_min_pause_percent: u32,
+    new_pronunciation_difficulty: PronunciationDifficulty,
     new_warning_sound: WarningSound,
 }
 
@@ -123,6 +136,9 @@ impl InterruptApp {
         let new_science_questions_needed = settings.science_questions_needed;
         let new_science_min_pause_percent = settings.science_min_pause_percent;
         let new_science_difficulty = settings.science_difficulty;
+        let new_pronunciation_questions_needed = settings.pronunciation_questions_needed;
+        let new_pronunciation_min_pause_percent = settings.pronunciation_min_pause_percent;
+        let new_pronunciation_difficulty = settings.pronunciation_difficulty;
         let new_warning_sound = settings.warning_sound;
 
         win32::init_logging(settings.enable_logging);
@@ -212,6 +228,14 @@ impl InterruptApp {
             science_feedback: None,
             science_feedback_color: egui::Color32::LIGHT_GRAY,
             science_question_index: 0,
+            pronunciation_word_to_speak: String::new(),
+            pronunciation_choices: Vec::new(),
+            pronunciation_correct_idx: 0,
+            pronunciation_phonetic_hint: String::new(),
+            pronunciation_solved_count: 0,
+            pronunciation_feedback: None,
+            pronunciation_feedback_color: egui::Color32::LIGHT_GRAY,
+            pronunciation_question_index: 0,
             active_settings_tab: 0,
             new_language,
             new_math_questions_needed,
@@ -226,6 +250,9 @@ impl InterruptApp {
             new_science_questions_needed,
             new_science_min_pause_percent,
             new_science_difficulty,
+            new_pronunciation_questions_needed,
+            new_pronunciation_min_pause_percent,
+            new_pronunciation_difficulty,
             new_warning_sound,
             five_sec_sound_played: false,
             debug_mode,
@@ -462,6 +489,25 @@ impl InterruptApp {
         self.science_feedback = None;
     }
 
+    fn generate_pronunciation_problem(&mut self) {
+        let pool = get_pronunciation_question_pool(self.settings.language, self.settings.pronunciation_difficulty);
+        if pool.is_empty() {
+            return;
+        }
+
+        self.pronunciation_question_index = self.pronunciation_question_index.wrapping_add(1);
+        let idx = self.pronunciation_question_index % pool.len();
+        let item = &pool[idx];
+
+        self.pronunciation_word_to_speak = item.word_to_speak.clone();
+        self.pronunciation_choices = item.choices.clone();
+        self.pronunciation_correct_idx = item.correct_idx;
+        self.pronunciation_phonetic_hint = item.phonetic_hint.clone();
+        self.pronunciation_feedback = None;
+
+        win32::speak_text_async(&self.pronunciation_word_to_speak);
+    }
+
     fn draw_circular_timer(
         &self,
         ui: &mut egui::Ui,
@@ -680,6 +726,13 @@ impl InterruptApp {
                     if elapsed.as_secs() >= min_dur_sec as u64 {
                         self.transition_to_play(ctx, "science exercises complete & min duration met");
                     }
+                } else if self.settings.screensaver_style == ScreensaverStyle::Pronunciation
+                    && self.pronunciation_solved_count >= self.settings.pronunciation_questions_needed
+                {
+                    let min_dur_sec = ((self.pause_duration().as_secs() as u32) * self.settings.pronunciation_min_pause_percent) / 100;
+                    if elapsed.as_secs() >= min_dur_sec as u64 {
+                        self.transition_to_play(ctx, "pronunciation exercises complete & min duration met");
+                    }
                 }
             }
         }
@@ -713,6 +766,10 @@ impl InterruptApp {
         self.science_solved_count = 0;
         self.science_feedback = None;
         self.generate_science_problem();
+
+        self.pronunciation_solved_count = 0;
+        self.pronunciation_feedback = None;
+        self.generate_pronunciation_problem();
 
         let rect = win32::get_virtual_screen_rect();
         ctx.send_viewport_cmd(egui::ViewportCommand::Fullscreen(true));
@@ -836,6 +893,7 @@ impl InterruptApp {
                     && self.settings.screensaver_style != ScreensaverStyle::Geography
                     && self.settings.screensaver_style != ScreensaverStyle::Vocab
                     && self.settings.screensaver_style != ScreensaverStyle::Science
+                    && self.settings.screensaver_style != ScreensaverStyle::Pronunciation
                     && !self.show_pause_unblock_panel
                 {
                     self.show_pause_unblock_panel = true;
@@ -1460,6 +1518,164 @@ impl InterruptApp {
                             });
                     }
 
+                    if self.settings.screensaver_style == ScreensaverStyle::Pronunciation {
+                        ui.add_space(20.0);
+                        egui::Frame::none()
+                            .fill(egui::Color32::from_rgba_unmultiplied(23, 15, 38, 235))
+                            .rounding(16.0)
+                            .stroke(egui::Stroke::new(1.5, egui::Color32::from_rgba_unmultiplied(192, 132, 252, 130)))
+                            .inner_margin(egui::Margin::same(24.0))
+                            .show(ui, |ui| {
+                                ui.set_max_width(480.0);
+                                ui.vertical_centered(|ui| {
+                                    ui.label(
+                                        egui::RichText::new(tr(self.settings.language, "pronunciation_title"))
+                                            .size(24.0)
+                                            .strong()
+                                            .color(egui::Color32::from_rgb(192, 132, 252)),
+                                    );
+                                    ui.add_space(4.0);
+                                    
+                                    let total_needed = self.settings.pronunciation_questions_needed;
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Listen and solve {} pronunciation questions ({}/{} solved)",
+                                            total_needed,
+                                            self.pronunciation_solved_count,
+                                            total_needed
+                                        ))
+                                        .size(14.0)
+                                        .color(egui::Color32::LIGHT_GRAY),
+                                    );
+                                    ui.add_space(16.0);
+
+                                    let min_dur_sec = ((self.pause_duration().as_secs() as u32) * self.settings.pronunciation_min_pause_percent) / 100;
+                                    let elapsed_sec = self.state_start.elapsed().as_secs();
+
+                                    self.draw_circular_timer(
+                                        ui,
+                                        elapsed_sec as f32,
+                                        self.pause_duration().as_secs() as f32,
+                                        min_dur_sec as f32,
+                                    );
+                                    ui.add_space(20.0);
+
+                                    if self.pronunciation_solved_count >= total_needed {
+                                        ui.label(
+                                            egui::RichText::new("🎉 All questions solved!")
+                                                .size(20.0)
+                                                .strong()
+                                                .color(egui::Color32::from_rgb(52, 211, 153)),
+                                        );
+                                        ui.add_space(8.0);
+                                        ui.label(
+                                            egui::RichText::new("Break must continue to meet the minimum required off-game duration.")
+                                                .size(14.0)
+                                                .color(egui::Color32::YELLOW),
+                                        );
+                                    } else {
+                                        ui.label(
+                                            egui::RichText::new(tr(self.settings.language, "pronunciation_instructions"))
+                                                .size(15.0)
+                                                .color(egui::Color32::from_rgb(226, 232, 240)),
+                                        );
+                                        ui.add_space(12.0);
+
+                                        // Audio Playback / Replay Button
+                                        if ui.add_sized(
+                                            [240.0, 42.0],
+                                            egui::Button::new(
+                                                egui::RichText::new(tr(self.settings.language, "pronunciation_listen"))
+                                                    .size(16.0)
+                                                    .strong()
+                                                    .color(egui::Color32::WHITE)
+                                            )
+                                            .fill(egui::Color32::from_rgb(147, 51, 234))
+                                        ).clicked() {
+                                            win32::speak_text_async(&self.pronunciation_word_to_speak);
+                                        }
+
+                                        ui.add_space(18.0);
+
+                                        let mut selected_choice: Option<usize> = None;
+                                        egui::Grid::new("pronunciation_choices_grid")
+                                            .num_columns(3)
+                                            .spacing([12.0, 10.0])
+                                            .show(ui, |ui| {
+                                                for (idx, choice) in self.pronunciation_choices.iter().enumerate() {
+                                                    let btn = ui.add_sized(
+                                                        [136.0, 40.0],
+                                                        egui::Button::new(
+                                                            egui::RichText::new(format!("{}. {}", idx + 1, choice))
+                                                                .size(15.0)
+                                                                .strong()
+                                                        )
+                                                    );
+                                                    if btn.clicked() {
+                                                        selected_choice = Some(idx);
+                                                    }
+                                                }
+                                                ui.end_row();
+                                            });
+
+                                        if selected_choice.is_none() {
+                                            for idx in 0..self.pronunciation_choices.len() {
+                                                let key = match idx {
+                                                    0 => egui::Key::Num1,
+                                                    1 => egui::Key::Num2,
+                                                    2 => egui::Key::Num3,
+                                                    _ => egui::Key::Num0,
+                                                };
+                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel || !self.focus_password_field) {
+                                                    selected_choice = Some(idx);
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        if let Some(idx) = selected_choice {
+                                            if idx == self.pronunciation_correct_idx {
+                                                self.pronunciation_solved_count += 1;
+                                                if self.pronunciation_solved_count >= total_needed {
+                                                    if elapsed_sec >= min_dur_sec as u64 {
+                                                        self.transition_to_play(ctx, "solved pronunciation exercises");
+                                                    } else {
+                                                        self.pronunciation_feedback = Some("Correct! All questions solved! Waiting for break duration...".to_string());
+                                                        self.pronunciation_feedback_color = egui::Color32::from_rgb(52, 211, 153);
+                                                    }
+                                                } else {
+                                                    let hint_prefix = tr(self.settings.language, "pronunciation_correct");
+                                                    self.pronunciation_feedback = Some(format!("{}{}", hint_prefix, self.pronunciation_phonetic_hint));
+                                                    self.pronunciation_feedback_color = egui::Color32::from_rgb(52, 211, 153);
+                                                    self.generate_pronunciation_problem();
+                                                }
+                                            } else {
+                                                self.pronunciation_feedback = Some(tr(self.settings.language, "pronunciation_incorrect").to_string());
+                                                self.pronunciation_feedback_color = egui::Color32::from_rgb(248, 113, 113);
+                                            }
+                                        }
+
+                                        if let Some(ref feedback) = self.pronunciation_feedback {
+                                            ui.add_space(10.0);
+                                            ui.label(
+                                                egui::RichText::new(feedback)
+                                                    .size(14.0)
+                                                    .color(self.pronunciation_feedback_color),
+                                            );
+                                        }
+                                    }
+
+                                    if !self.show_pause_unblock_panel {
+                                        ui.add_space(12.0);
+                                        if ui.link(tr(self.settings.language, "🔑 Use Administrator Password")).clicked() {
+                                            self.show_pause_unblock_panel = true;
+                                            self.focus_password_field = true;
+                                        }
+                                    }
+                                });
+                            });
+                    }
+
                     ui.add_space(30.0);
 
                     // Password unblock panel (Only visible when user interacts)
@@ -1863,6 +2079,35 @@ impl InterruptApp {
                                                 ui.end_row();
                                             });
                                     }
+                                    ScreensaverStyle::Pronunciation => {
+                                        egui::Grid::new("pronunciation_settings_grid")
+                                            .num_columns(2)
+                                            .spacing([16.0, 10.0])
+                                            .show(ui, |ui| {
+                                                ui.label(tr(self.settings.language, "Questions to Solve:"));
+                                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_pronunciation_questions_needed).range(1..=20));
+                                                ui.end_row();
+
+                                                ui.label(tr(self.settings.language, "Min Break Duration (%):"));
+                                                ui.add_sized([180.0, 22.0], egui::DragValue::new(&mut self.new_pronunciation_min_pause_percent).range(30..=100));
+                                                ui.end_row();
+
+                                                ui.label(tr(self.settings.language, "Difficulty:"));
+                                                egui::ComboBox::from_id_source("pronunciation_difficulty_selector")
+                                                    .selected_text(self.new_pronunciation_difficulty.name_localized(self.new_language))
+                                                    .width(180.0)
+                                                    .show_ui(ui, |ui| {
+                                                        for diff in PronunciationDifficulty::all() {
+                                                            ui.selectable_value(
+                                                                &mut self.new_pronunciation_difficulty,
+                                                                *diff,
+                                                                diff.name_localized(self.new_language),
+                                                            );
+                                                        }
+                                                    });
+                                                ui.end_row();
+                                            });
+                                    }
                                     _ => {
                                         ui.label(egui::RichText::new(tr(self.settings.language, "This screensaver style has no custom configuration parameters."))
                                             .color(egui::Color32::LIGHT_GRAY));
@@ -1892,6 +2137,9 @@ impl InterruptApp {
                                     self.settings.science_questions_needed = self.new_science_questions_needed;
                                     self.settings.science_min_pause_percent = self.new_science_min_pause_percent;
                                     self.settings.science_difficulty = self.new_science_difficulty;
+                                    self.settings.pronunciation_questions_needed = self.new_pronunciation_questions_needed;
+                                    self.settings.pronunciation_min_pause_percent = self.new_pronunciation_min_pause_percent;
+                                    self.settings.pronunciation_difficulty = self.new_pronunciation_difficulty;
                                     self.settings.warning_sound = self.new_warning_sound;
                                     win32::init_logging(self.new_enable_logging);
                                     if !self.new_password_input.trim().is_empty() {
@@ -2347,6 +2595,14 @@ mod tests {
             science_feedback: None,
             science_feedback_color: egui::Color32::LIGHT_GRAY,
             science_question_index: 0,
+            pronunciation_word_to_speak: String::new(),
+            pronunciation_choices: Vec::new(),
+            pronunciation_correct_idx: 0,
+            pronunciation_phonetic_hint: String::new(),
+            pronunciation_solved_count: 0,
+            pronunciation_feedback: None,
+            pronunciation_feedback_color: egui::Color32::LIGHT_GRAY,
+            pronunciation_question_index: 0,
             active_settings_tab: 0,
             new_language: settings.language,
             new_math_questions_needed: settings.math_questions_needed,
@@ -2361,6 +2617,9 @@ mod tests {
             new_science_questions_needed: settings.science_questions_needed,
             new_science_min_pause_percent: settings.science_min_pause_percent,
             new_science_difficulty: settings.science_difficulty,
+            new_pronunciation_questions_needed: settings.pronunciation_questions_needed,
+            new_pronunciation_min_pause_percent: settings.pronunciation_min_pause_percent,
+            new_pronunciation_difficulty: settings.pronunciation_difficulty,
             new_warning_sound: settings.warning_sound,
             five_sec_sound_played: false,
         }
@@ -2481,6 +2740,23 @@ mod tests {
         assert_eq!(app_debug.settings.play_time_minutes, 30);
         assert_eq!(app_debug.settings.pause_time_minutes, 5);
     }
+
+    #[test]
+    fn test_pronunciation_problem_generation() {
+        let settings = AppSettings::default();
+        let mut app = create_test_app(settings);
+
+        for diff in PronunciationDifficulty::all() {
+            app.settings.pronunciation_difficulty = *diff;
+            app.generate_pronunciation_problem();
+
+            assert!(!app.pronunciation_word_to_speak.is_empty(), "Spoken word should not be empty");
+            assert_eq!(app.pronunciation_choices.len(), 3, "Pronunciation question should have 3 choices");
+            assert!(app.pronunciation_correct_idx < 3, "Correct index should be within bounds");
+            assert!(!app.pronunciation_phonetic_hint.is_empty(), "Phonetic hint should not be empty");
+        }
+    }
 }
+
 
 

@@ -11,6 +11,7 @@ pub enum ScreensaverStyle {
     Geography,
     Vocab,
     Science,
+    Pronunciation,
 }
 
 impl Default for ScreensaverStyle {
@@ -29,6 +30,7 @@ impl ScreensaverStyle {
             ScreensaverStyle::Geography,
             ScreensaverStyle::Vocab,
             ScreensaverStyle::Science,
+            ScreensaverStyle::Pronunciation,
         ]
     }
 
@@ -46,6 +48,7 @@ impl ScreensaverStyle {
             (Language::Spanish, ScreensaverStyle::Geography) => "Geografía y Banderas (Trivia Mundial)",
             (Language::Spanish, ScreensaverStyle::Vocab) => "Vocabulario y Ortografía (Quiz de Palabras)",
             (Language::Spanish, ScreensaverStyle::Science) => "Ciencia y Naturaleza (Trivia STEM)",
+            (Language::Spanish, ScreensaverStyle::Pronunciation) => "Pronunciación en Inglés (Audición de Palabras)",
             (_, ScreensaverStyle::Default) => "Default (Ambient Aurora)",
             (_, ScreensaverStyle::Minimalist) => "Minimalist (Monochrome Dark)",
             (_, ScreensaverStyle::Matrix) => "Matrix (Digital Green Rain)",
@@ -53,6 +56,7 @@ impl ScreensaverStyle {
             (_, ScreensaverStyle::Geography) => "Geography & Flags (World Trivia)",
             (_, ScreensaverStyle::Vocab) => "Vocab & Spelling (Word Quiz)",
             (_, ScreensaverStyle::Science) => "Science & Nature (STEM Trivia)",
+            (_, ScreensaverStyle::Pronunciation) => "English Pronunciation (Listening Quiz)",
         }
     }
 }
@@ -614,6 +618,71 @@ impl ScreensaverComponent for ScienceScreensaver {
     }
 }
 
+// 8. English Pronunciation Screensaver Component (Floating Audio Waves & Speech Symbols)
+pub struct PronunciationScreensaver {
+    pub lang: Language,
+}
+
+impl Default for PronunciationScreensaver {
+    fn default() -> Self {
+        Self {
+            lang: Language::English,
+        }
+    }
+}
+
+impl ScreensaverComponent for PronunciationScreensaver {
+    fn render_visuals(&mut self, ui: &mut egui::Ui, _remaining_sec: u64) {
+        let screen_rect = ui.ctx().screen_rect();
+        let time = ui.input(|i| i.time);
+        let painter = ui.painter();
+
+        let symbols = [
+            "🔊", "🎧", "🗣️", "💬", "🎵", "🎙️", "🎶", "📢", "📻", "🔤", "👂", "🔔",
+        ];
+        let num_elements = 24;
+
+        for i in 0..num_elements {
+            let seed = (i * 61 + 19) as f64;
+            let size = 18.0 + (seed % 16.0) as f32;
+            let x_base = screen_rect.min.x + ((seed * 83.0) as f32 % screen_rect.width());
+            let x_sway = (time * 0.5 + seed).sin() as f32 * 25.0;
+            let x = x_base + x_sway;
+
+            let loop_height = screen_rect.height() + 80.0;
+            let speed = 16.0 + (seed % 22.0) as f32;
+            let y = screen_rect.max.y - ((time as f32 * speed + (seed * 53.0) as f32) % loop_height);
+
+            let alpha = ((time * 0.7 + seed).sin() * 0.2 + 0.35) as f32;
+            let color = egui::Color32::from_rgba_unmultiplied(
+                192,
+                132,
+                252,
+                (255.0 * alpha) as u8,
+            );
+
+            let symbol = symbols[i % symbols.len()];
+            painter.text(
+                egui::pos2(x, y),
+                egui::Align2::CENTER_CENTER,
+                symbol,
+                egui::FontId::proportional(size),
+                color,
+            );
+        }
+
+        let title = tr(self.lang, "pronunciation_title");
+
+        painter.text(
+            screen_rect.center() - egui::vec2(0.0, 200.0),
+            egui::Align2::CENTER_CENTER,
+            title,
+            egui::FontId::proportional(30.0),
+            egui::Color32::from_rgb(192, 132, 252),
+        );
+    }
+}
+
 /// Renders the visual content of the selected screensaver style.
 #[allow(dead_code)]
 pub fn render_screensaver_style(
@@ -638,6 +707,7 @@ pub fn render_screensaver_style_localized(
         ScreensaverStyle::Geography => GeographyScreensaver { lang }.render_visuals(ui, remaining_sec),
         ScreensaverStyle::Vocab => VocabScreensaver { lang }.render_visuals(ui, remaining_sec),
         ScreensaverStyle::Science => ScienceScreensaver { lang }.render_visuals(ui, remaining_sec),
+        ScreensaverStyle::Pronunciation => PronunciationScreensaver { lang }.render_visuals(ui, remaining_sec),
     }
 }
 
@@ -650,6 +720,8 @@ pub fn get_background_color(style: ScreensaverStyle) -> egui::Color32 {
         ScreensaverStyle::Geography => egui::Color32::from_rgb(13, 27, 42), // Deep Ocean Navy
         ScreensaverStyle::Vocab => egui::Color32::from_rgb(24, 18, 43), // Deep Amber/Purple Velvet
         ScreensaverStyle::Science => egui::Color32::from_rgb(10, 22, 40), // Deep Cosmic Cyan/Navy
+        ScreensaverStyle::Pronunciation => egui::Color32::from_rgb(23, 15, 38), // Deep Violet/Purple Night
     }
 }
+
 

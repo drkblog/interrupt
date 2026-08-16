@@ -199,6 +199,61 @@ fn default_science_difficulty() -> ScienceDifficulty {
     ScienceDifficulty::Medium
 }
 
+fn default_pronunciation_questions_needed() -> u32 {
+    3
+}
+
+fn default_pronunciation_min_pause_percent() -> u32 {
+    50
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PronunciationDifficulty {
+    Low,
+    Medium,
+    High,
+    Expert,
+}
+
+impl Default for PronunciationDifficulty {
+    fn default() -> Self {
+        PronunciationDifficulty::Medium
+    }
+}
+
+impl PronunciationDifficulty {
+    pub fn all() -> &'static [PronunciationDifficulty] {
+        &[
+            PronunciationDifficulty::Low,
+            PronunciationDifficulty::Medium,
+            PronunciationDifficulty::High,
+            PronunciationDifficulty::Expert,
+        ]
+    }
+
+    #[allow(dead_code)]
+    pub fn name(&self) -> &'static str {
+        self.name_localized(Language::English)
+    }
+
+    pub fn name_localized(&self, lang: Language) -> &'static str {
+        match (lang, self) {
+            (Language::Spanish, PronunciationDifficulty::Low) => "Bajo (Principiante - Palabras Fonéticas Simples)",
+            (Language::Spanish, PronunciationDifficulty::Medium) => "Medio (Intermedio - Pares Mínimos y Homófonos)",
+            (Language::Spanish, PronunciationDifficulty::High) => "Alto (Avanzado - Multisilábicas y Letras Mudas)",
+            (Language::Spanish, PronunciationDifficulty::Expert) => "Experto (Avanzado Superior - Términos Complejos y Acentos)",
+            (_, PronunciationDifficulty::Low) => "Low (Beginner - Simple Phonetic Words)",
+            (_, PronunciationDifficulty::Medium) => "Medium (Intermediate - Minimal Pairs & Homophones)",
+            (_, PronunciationDifficulty::High) => "High (Advanced - Multi-syllables & Silent Letters)",
+            (_, PronunciationDifficulty::Expert) => "Expert (Master - Complex Terms & Stress Patterns)",
+        }
+    }
+}
+
+fn default_pronunciation_difficulty() -> PronunciationDifficulty {
+    PronunciationDifficulty::Medium
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum WarningSound {
     Warning,
@@ -293,6 +348,12 @@ pub struct AppSettings {
     pub science_min_pause_percent: u32,
     #[serde(default = "default_science_difficulty")]
     pub science_difficulty: ScienceDifficulty,
+    #[serde(default = "default_pronunciation_questions_needed")]
+    pub pronunciation_questions_needed: u32,
+    #[serde(default = "default_pronunciation_min_pause_percent")]
+    pub pronunciation_min_pause_percent: u32,
+    #[serde(default = "default_pronunciation_difficulty")]
+    pub pronunciation_difficulty: PronunciationDifficulty,
 }
 
 impl Default for AppSettings {
@@ -318,6 +379,9 @@ impl Default for AppSettings {
             science_questions_needed: 3,
             science_min_pause_percent: 50,
             science_difficulty: ScienceDifficulty::Medium,
+            pronunciation_questions_needed: 3,
+            pronunciation_min_pause_percent: 50,
+            pronunciation_difficulty: PronunciationDifficulty::Medium,
         }
     }
 }
@@ -332,6 +396,7 @@ impl AppSettings {
                         settings.geography_min_pause_percent = settings.geography_min_pause_percent.clamp(30, 100);
                         settings.vocab_min_pause_percent = settings.vocab_min_pause_percent.clamp(30, 100);
                         settings.science_min_pause_percent = settings.science_min_pause_percent.clamp(30, 100);
+                        settings.pronunciation_min_pause_percent = settings.pronunciation_min_pause_percent.clamp(30, 100);
                         return settings;
                     }
                 }
@@ -430,6 +495,7 @@ mod tests {
         let settings = AppSettings::default();
         assert_eq!(settings.vocab_difficulty, VocabDifficulty::Medium);
         assert_eq!(settings.science_difficulty, ScienceDifficulty::Medium);
+        assert_eq!(settings.pronunciation_difficulty, PronunciationDifficulty::Medium);
         assert_eq!(settings.language, Language::English);
     }
 
@@ -440,17 +506,20 @@ mod tests {
         assert_eq!(settings.geography_min_pause_percent, 50);
         assert_eq!(settings.vocab_min_pause_percent, 50);
         assert_eq!(settings.science_min_pause_percent, 50);
+        assert_eq!(settings.pronunciation_min_pause_percent, 50);
 
-        let json = r#"{"play_time_minutes":30,"pause_time_minutes":5,"password_hash":"1234","math_min_pause_percent":10,"geography_min_pause_percent":5,"vocab_min_pause_percent":2,"science_min_pause_percent":1}"#;
+        let json = r#"{"play_time_minutes":30,"pause_time_minutes":5,"password_hash":"1234","math_min_pause_percent":10,"geography_min_pause_percent":5,"vocab_min_pause_percent":2,"science_min_pause_percent":1,"pronunciation_min_pause_percent":4}"#;
         let mut loaded: AppSettings = serde_json::from_str(json).unwrap();
         loaded.math_min_pause_percent = loaded.math_min_pause_percent.clamp(30, 100);
         loaded.geography_min_pause_percent = loaded.geography_min_pause_percent.clamp(30, 100);
         loaded.vocab_min_pause_percent = loaded.vocab_min_pause_percent.clamp(30, 100);
         loaded.science_min_pause_percent = loaded.science_min_pause_percent.clamp(30, 100);
+        loaded.pronunciation_min_pause_percent = loaded.pronunciation_min_pause_percent.clamp(30, 100);
         assert_eq!(loaded.math_min_pause_percent, 30);
         assert_eq!(loaded.geography_min_pause_percent, 30);
         assert_eq!(loaded.vocab_min_pause_percent, 30);
         assert_eq!(loaded.science_min_pause_percent, 30);
+        assert_eq!(loaded.pronunciation_min_pause_percent, 30);
     }
 
     #[test]

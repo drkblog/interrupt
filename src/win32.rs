@@ -642,3 +642,17 @@ pub fn unregister_tray_icon() {
         }
     }
 }
+
+pub fn speak_text_async(text: &str) {
+    let word = text.to_string();
+    std::thread::spawn(move || {
+        let script = format!(
+            "Add-Type -AssemblyName System.Speech; $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Speak('{}')",
+            word.replace('\'', "''")
+        );
+        let _ = std::process::Command::new("powershell")
+            .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+            .output();
+    });
+}
+

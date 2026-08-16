@@ -1,3 +1,4 @@
+use crate::config::PronunciationDifficulty;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -113,6 +114,12 @@ pub fn tr(lang: Language, text: &'static str) -> &'static str {
         "geography_title" => "🌍 Geografía y Banderas del Mundo",
         "🌍 Geography & Country Flags" => "🌍 Geografía y Banderas del Mundo",
         "math_title" => "🧮 Quiz de Matemáticas",
+        "pronunciation_title" => "🔊 Quiz de Pronunciación en Inglés",
+        "🔊 English Pronunciation Quiz" => "🔊 Quiz de Pronunciación en Inglés",
+        "pronunciation_instructions" => "Escucha con atención la voz en inglés y selecciona la palabra correcta:",
+        "pronunciation_listen" => "🔊 Escuchar / Repetir Audio",
+        "pronunciation_correct" => "✅ ¡Correcto! Pista fonética: ",
+        "pronunciation_incorrect" => "❌ Selección incorrecta. Escucha de nuevo e inténtalo otra vez.",
         "🧮 Math Quiz" => "🧮 Quiz de Matemáticas",
 
         // Exercise Cards & Quiz Overlay
@@ -860,6 +867,174 @@ pub fn get_science_question_pool(lang: Language, difficulty: crate::config::Scie
                 correct: "Primera Ley (Conservación) ⚖️",
                 wrong: ["Segunda Ley (Entropía)", "Tercera Ley (Cero Absoluto)", "Ley Cero"],
                 explanation: "💡 ¿Sabías que? La energía solo se transforma, por ejemplo de energía química a calor.",
+            },
+        ],
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PronunciationQuestion {
+    pub word_to_speak: String,
+    pub choices: Vec<String>,
+    pub correct_idx: usize,
+    pub phonetic_hint: String,
+}
+
+pub fn get_pronunciation_question_pool(
+    _lang: Language,
+    difficulty: PronunciationDifficulty,
+) -> Vec<PronunciationQuestion> {
+    match difficulty {
+        PronunciationDifficulty::Low => vec![
+            PronunciationQuestion {
+                word_to_speak: "cat".to_string(),
+                choices: vec!["cat".to_string(), "dog".to_string(), "sun".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/kæt/ - Short 'a' sound".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "sun".to_string(),
+                choices: vec!["star".to_string(), "sun".to_string(), "moon".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/sʌn/ - Short 'u' sound".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "book".to_string(),
+                choices: vec!["pen".to_string(), "cup".to_string(), "book".to_string()],
+                correct_idx: 2,
+                phonetic_hint: "/bʊk/ - Short 'oo' sound".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "fish".to_string(),
+                choices: vec!["fish".to_string(), "bird".to_string(), "frog".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/fɪʃ/ - Short 'i' sound".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "red".to_string(),
+                choices: vec!["blue".to_string(), "red".to_string(), "green".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/red/ - Short 'e' sound".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "jump".to_string(),
+                choices: vec!["walk".to_string(), "run".to_string(), "jump".to_string()],
+                correct_idx: 2,
+                phonetic_hint: "/dʒʌmp/ - Soft 'j' sound".to_string(),
+            },
+        ],
+        PronunciationDifficulty::Medium => vec![
+            PronunciationQuestion {
+                word_to_speak: "ship".to_string(),
+                choices: vec!["ship".to_string(), "sheep".to_string(), "shop".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/ʃɪp/ vs /ʃiːp/ - Short 'i' vs Long 'ee'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "sheep".to_string(),
+                choices: vec!["ship".to_string(), "sheep".to_string(), "sheet".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/ʃiːp/ vs /ʃɪp/ - Long 'ee' vowel".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "bear".to_string(),
+                choices: vec!["beer".to_string(), "bear".to_string(), "bare".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/bɛər/ vs /bɪər/ - Air vowel contrast".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "desk".to_string(),
+                choices: vec!["disk".to_string(), "desk".to_string(), "dusk".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/desk/ vs /dɪsk/ - Short 'e' vs Short 'i'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "write".to_string(),
+                choices: vec!["right".to_string(), "write".to_string(), "white".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/raɪt/ - Silent 'w' homophone".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "think".to_string(),
+                choices: vec!["sink".to_string(), "thank".to_string(), "think".to_string()],
+                correct_idx: 2,
+                phonetic_hint: "/θɪŋk/ vs /sɪŋk/ - Voiceless 'th' sound".to_string(),
+            },
+        ],
+        PronunciationDifficulty::High => vec![
+            PronunciationQuestion {
+                word_to_speak: "receipt".to_string(),
+                choices: vec!["deceit".to_string(), "receipt".to_string(), "conceit".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/rɪˈsiːt/ - Silent 'p'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "subtle".to_string(),
+                choices: vec!["subtle".to_string(), "supple".to_string(), "suttle".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/ˈsʌt.əl/ - Silent 'b'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "knight".to_string(),
+                choices: vec!["night".to_string(), "knight".to_string(), "knot".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/naɪt/ - Silent 'k'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "island".to_string(),
+                choices: vec!["inland".to_string(), "island".to_string(), "iceland".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/ˈaɪ.lənd/ - Silent 's'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "desert".to_string(),
+                choices: vec!["desert".to_string(), "dessert".to_string(), "assert".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/ˈdez.ɚt/ - Stress on 1st syllable".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "dessert".to_string(),
+                choices: vec!["desert".to_string(), "dessert".to_string(), "divert".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/dɪˈzɝːt/ - Stress on 2nd syllable".to_string(),
+            },
+        ],
+        PronunciationDifficulty::Expert => vec![
+            PronunciationQuestion {
+                word_to_speak: "anemone".to_string(),
+                choices: vec!["amnesia".to_string(), "anemone".to_string(), "aluminum".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/əˈnem.ə.ni/ - Four-syllable stress".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "cache".to_string(),
+                choices: vec!["cash".to_string(), "cache".to_string(), "catch".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/kæʃ/ - Rhymes with cash (silent 'e')".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "choir".to_string(),
+                choices: vec!["wire".to_string(), "choir".to_string(), "chore".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/kwaɪər/ - Hard 'ch' as /kw/".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "colonel".to_string(),
+                choices: vec!["kernel".to_string(), "colonel".to_string(), "column".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/ˈkɝː.nəl/ - Pronounced like 'kernel'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "worcestershire".to_string(),
+                choices: vec!["worcestershire".to_string(), "winchester".to_string(), "westminster".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/ˈwʊs.tɚ.ʃɚ/ - Silent syllables".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "hyperbole".to_string(),
+                choices: vec!["hyperbowl".to_string(), "hyperbole".to_string(), "hyperball".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/haɪˈpɝː.bəl.i/ - Four-syllable hyper-bo-le".to_string(),
             },
         ],
     }
