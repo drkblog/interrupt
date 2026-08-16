@@ -176,6 +176,11 @@ impl InterruptApp {
         style.spacing.item_spacing = egui::vec2(8.0, 12.0);
         cc.egui_ctx.set_style(style);
 
+        let init_rand_seed = (std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos() & 0xFFFF) as usize;
+
         Self {
             settings,
             state: AppState::Play,
@@ -214,14 +219,14 @@ impl InterruptApp {
             geography_solved_count: 0,
             geography_feedback: None,
             geography_feedback_color: egui::Color32::LIGHT_GRAY,
-            geography_question_index: 0,
+            geography_question_index: init_rand_seed,
             vocab_question_text: String::new(),
             vocab_choices: Vec::new(),
             vocab_correct_idx: 0,
             vocab_solved_count: 0,
             vocab_feedback: None,
             vocab_feedback_color: egui::Color32::LIGHT_GRAY,
-            vocab_question_index: 0,
+            vocab_question_index: init_rand_seed.wrapping_add(13),
             science_question_text: String::new(),
             science_choices: Vec::new(),
             science_correct_idx: 0,
@@ -229,7 +234,7 @@ impl InterruptApp {
             science_solved_count: 0,
             science_feedback: None,
             science_feedback_color: egui::Color32::LIGHT_GRAY,
-            science_question_index: 0,
+            science_question_index: init_rand_seed.wrapping_add(37),
             pronunciation_word_to_speak: String::new(),
             pronunciation_choices: Vec::new(),
             pronunciation_correct_idx: 0,
@@ -237,7 +242,7 @@ impl InterruptApp {
             pronunciation_solved_count: 0,
             pronunciation_feedback: None,
             pronunciation_feedback_color: egui::Color32::LIGHT_GRAY,
-            pronunciation_question_index: 0,
+            pronunciation_question_index: init_rand_seed.wrapping_add(53),
             active_settings_tab: 0,
             new_language,
             new_math_questions_needed,
@@ -415,7 +420,8 @@ impl InterruptApp {
             return;
         }
 
-        self.geography_question_index = self.geography_question_index.wrapping_add(1);
+        let step = (((ticks >> 3) % (pool.len() as u128 - 1).max(1)) + 1) as usize;
+        self.geography_question_index = self.geography_question_index.wrapping_add(step);
         let idx = self.geography_question_index % pool.len();
         let item = &pool[idx];
 
@@ -444,7 +450,8 @@ impl InterruptApp {
             return;
         }
 
-        self.vocab_question_index = self.vocab_question_index.wrapping_add(1);
+        let step = (((ticks >> 3) % (pool.len() as u128 - 1).max(1)) + 1) as usize;
+        self.vocab_question_index = self.vocab_question_index.wrapping_add(step);
         let idx = self.vocab_question_index % pool.len();
         let item = &pool[idx];
 
@@ -473,7 +480,8 @@ impl InterruptApp {
             return;
         }
 
-        self.science_question_index = self.science_question_index.wrapping_add(1);
+        let step = (((ticks >> 3) % (pool.len() as u128 - 1).max(1)) + 1) as usize;
+        self.science_question_index = self.science_question_index.wrapping_add(step);
         let idx = self.science_question_index % pool.len();
         let item = &pool[idx];
 
@@ -493,18 +501,34 @@ impl InterruptApp {
     }
 
     fn generate_pronunciation_problem(&mut self) {
+        let ticks = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+
         let pool = get_pronunciation_question_pool(self.settings.language, self.settings.pronunciation_difficulty);
         if pool.is_empty() {
             return;
         }
 
-        self.pronunciation_question_index = self.pronunciation_question_index.wrapping_add(1);
+        let step = (((ticks >> 3) % (pool.len() as u128 - 1).max(1)) + 1) as usize;
+        self.pronunciation_question_index = self.pronunciation_question_index.wrapping_add(step);
         let idx = self.pronunciation_question_index % pool.len();
         let item = &pool[idx];
 
+        let mut choices = item.choices.clone();
+        let correct_word = choices[item.correct_idx].clone();
+
+        let swap_1 = ((ticks >> 4) % 3) as usize;
+        choices.swap(0, swap_1);
+        let swap_2 = ((ticks >> 8) % 3) as usize;
+        choices.swap(1, swap_2);
+
+        let correct_idx = choices.iter().position(|c| c == &correct_word).unwrap_or(0);
+
         self.pronunciation_word_to_speak = item.word_to_speak.clone();
-        self.pronunciation_choices = item.choices.clone();
-        self.pronunciation_correct_idx = item.correct_idx;
+        self.pronunciation_choices = choices;
+        self.pronunciation_correct_idx = correct_idx;
         self.pronunciation_phonetic_hint = item.phonetic_hint.clone();
         self.pronunciation_feedback = None;
 

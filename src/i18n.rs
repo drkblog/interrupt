@@ -928,6 +928,42 @@ pub fn get_pronunciation_question_pool(
                 correct_idx: 2,
                 phonetic_hint: "/dʒʌmp/ - Soft 'j' sound".to_string(),
             },
+            PronunciationQuestion {
+                word_to_speak: "pen".to_string(),
+                choices: vec!["pen".to_string(), "pan".to_string(), "pin".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/pen/ - Short 'e' sound".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "hat".to_string(),
+                choices: vec!["hot".to_string(), "hat".to_string(), "hut".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/hæt/ - Short 'a' sound".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "box".to_string(),
+                choices: vec!["box".to_string(), "fox".to_string(), "bus".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/bɒks/ - Short 'o' sound".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "milk".to_string(),
+                choices: vec!["silk".to_string(), "milk".to_string(), "make".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/mɪlk/ - Short 'i' sound".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "duck".to_string(),
+                choices: vec!["dock".to_string(), "deck".to_string(), "duck".to_string()],
+                correct_idx: 2,
+                phonetic_hint: "/dʌk/ - Short 'u' sound".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "tree".to_string(),
+                choices: vec!["tree".to_string(), "three".to_string(), "try".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/triː/ - Long 'ee' sound".to_string(),
+            },
         ],
         PronunciationDifficulty::Medium => vec![
             PronunciationQuestion {
@@ -965,6 +1001,36 @@ pub fn get_pronunciation_question_pool(
                 choices: vec!["sink".to_string(), "thank".to_string(), "think".to_string()],
                 correct_idx: 2,
                 phonetic_hint: "/θɪŋk/ vs /sɪŋk/ - Voiceless 'th' sound".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "seat".to_string(),
+                choices: vec!["sit".to_string(), "seat".to_string(), "set".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/siːt/ vs /sɪt/ - Long 'ee' contrast".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "cut".to_string(),
+                choices: vec!["cat".to_string(), "cut".to_string(), "cot".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/kʌt/ vs /kæt/ - Short 'u' vs Short 'a'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "lock".to_string(),
+                choices: vec!["rock".to_string(), "lock".to_string(), "look".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/lɒk/ vs /rɒk/ - 'l' vs 'r' consonant".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "vow".to_string(),
+                choices: vec!["bow".to_string(), "vow".to_string(), "cow".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/vaʊ/ vs /baʊ/ - 'v' vs 'b' consonant".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "west".to_string(),
+                choices: vec!["vest".to_string(), "west".to_string(), "rest".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/west/ vs /vest/ - 'w' vs 'v' sound".to_string(),
             },
         ],
         PronunciationDifficulty::High => vec![
@@ -1004,6 +1070,36 @@ pub fn get_pronunciation_question_pool(
                 correct_idx: 1,
                 phonetic_hint: "/dɪˈzɝːt/ - Stress on 2nd syllable".to_string(),
             },
+            PronunciationQuestion {
+                word_to_speak: "comb".to_string(),
+                choices: vec!["home".to_string(), "comb".to_string(), "foam".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/koʊm/ - Silent 'b'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "doubt".to_string(),
+                choices: vec!["shout".to_string(), "doubt".to_string(), "debt".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/daʊt/ - Silent 'b'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "muscle".to_string(),
+                choices: vec!["mussel".to_string(), "muscle".to_string(), "muzzle".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/ˈmʌs.əl/ - Silent 'c'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "autumn".to_string(),
+                choices: vec!["autumn".to_string(), "awesome".to_string(), "auction".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/ˈɔː.təm/ - Silent 'n'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "listen".to_string(),
+                choices: vec!["glisten".to_string(), "listen".to_string(), "lesson".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/ˈlɪs.ən/ - Silent 't'".to_string(),
+            },
         ],
         PronunciationDifficulty::Expert => vec![
             PronunciationQuestion {
@@ -1041,6 +1137,42 @@ pub fn get_pronunciation_question_pool(
                 choices: vec!["hyperbowl".to_string(), "hyperbole".to_string(), "hyperball".to_string()],
                 correct_idx: 1,
                 phonetic_hint: "/haɪˈpɝː.bəl.i/ - Four-syllable hyper-bo-le".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "epitome".to_string(),
+                choices: vec!["epitome".to_string(), "epidemic".to_string(), "episode".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/ɪˈpɪt.ə.mi/ - Four-syllable e-pi-to-me".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "quinoa".to_string(),
+                choices: vec!["keen-wah".to_string(), "quinoa".to_string(), "quin-oh-a".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/ˈkiːn.wɑː/ - Pronounced keen-wah".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "sew".to_string(),
+                choices: vec!["sow".to_string(), "sew".to_string(), "saw".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/soʊ/ - Pronounced like 'so'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "schism".to_string(),
+                choices: vec!["siz-um".to_string(), "schism".to_string(), "skiz-um".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/ˈsɪz.əm/ - Soft 'sch' as /s/".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "draught".to_string(),
+                choices: vec!["draft".to_string(), "draught".to_string(), "doubt".to_string()],
+                correct_idx: 1,
+                phonetic_hint: "/dræft/ - Pronounced like 'draft'".to_string(),
+            },
+            PronunciationQuestion {
+                word_to_speak: "mischievous".to_string(),
+                choices: vec!["mischievous".to_string(), "mischievious".to_string(), "mischief".to_string()],
+                correct_idx: 0,
+                phonetic_hint: "/ˈmɪs.tʃɪ.vəs/ - Three syllables (not -vee-us)".to_string(),
             },
         ],
     }
