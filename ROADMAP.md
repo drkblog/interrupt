@@ -17,6 +17,8 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
 | FT-09 | Responsive Centered Info Badges Layout | Implemented |
 | FT-10 | English Pronunciation Lock Screen | Implemented |
 | FT-11 | English Pronunciation Lock Screen UI Redesign | Implemented |
+| FT-12 | Single-Instance Application Guard | Implemented |
+| FT-13 | Admin Password Focus Activity Pause & Resume | Implemented |
 
 ---
 
@@ -106,5 +108,14 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
   - Dynamic audio waveform frequency visualizer curves and expanding sound wave pulse rings rendered directly in the screensaver canvas painter.
   - Deep midnight violet card background with neon purple accent strokes and sound wave visualizer header badge.
 * **Implementation Plan**: Modify `PronunciationScreensaver` in `src/screensaver.rs` to paint sine-wave voice frequencies and sound pulse rings, and update `render_pause_screen` in `src/main.rs` with enlarged typography and custom purple card layout styling.
+
+### FT-12: Single-Instance Application Guard
+* **Description**: Prevent launching multiple concurrent instances of the `interrupt` application. If a second instance is started, display a Windows warning dialog and terminate the second instance immediately.
+* **Implementation Plan**: Use Win32 `CreateMutexW` with a global named mutex (`"Global\\InterruptSingleInstanceMutex"`). Check `GetLastError() == ERROR_ALREADY_EXISTS` on startup in `main()`, display a native warning dialog via `MessageBoxW`, and exit cleanly.
+
+### FT-13: Admin Password Focus Activity Pause & Resume
+* **Description**: Automatically suspend lock screen break timers, scheduled question progression, and quiz keyboard shortcuts whenever the Administrator Password input field is focused. Resume break timers & quiz activity immediately when an incorrect password is entered or when `Esc` is pressed.
+* **Implementation Plan**: Track `password_is_focused` in `InterruptApp`. When true, adjust `self.state_start` and `pronunciation_next_question_at` by frame delta to suspend countdown progression. Handle `Esc` key to close the unblock panel and clear focus, and release focus on wrong password submission to resume activity.
+
 
 

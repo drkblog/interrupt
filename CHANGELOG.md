@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.23.0] - 2026-08-16
 
+### Added
+- **Single-Instance Application Guard (FT-12)**: Prevents launching duplicate background instances of `interrupt`. Displays a native Windows warning dialog (`MessageBoxW`) and exits gracefully if another instance is already running.
+- **Admin Password Focus Activity Pause & Resume (FT-13)**: Automatically suspends break timer accumulation, question timers, and quiz keyboard shortcuts whenever the Administrator Password input field is focused. Activity resumes immediately when an incorrect password is entered or when `Esc` is pressed.
+
 ### Changed
 - **English Pronunciation Lock Screen Redesign (FT-11)**: Completely redesigned the UI look and feel for the English Pronunciation screen lock.
   - Enlarged typography for titles, instructions, audio playback control buttons, and choice cards to improve legibility and visual hierarchy.

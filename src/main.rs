@@ -41,6 +41,7 @@ pub struct InterruptApp {
     reset_password_input: String,
     reset_error_message: Option<String>,
     show_pause_unblock_panel: bool,
+    password_is_focused: bool,
     last_pause_interaction: Option<Instant>,
     five_sec_sound_played: bool,
     
@@ -205,6 +206,7 @@ impl InterruptApp {
             reset_password_input: String::new(),
             reset_error_message: None,
             show_pause_unblock_panel: false,
+            password_is_focused: false,
             last_pause_interaction: None,
             tray_registered: false,
             should_exit: false,
@@ -843,7 +845,10 @@ impl InterruptApp {
         if self.settings.verify_password(&self.password_input) {
             self.transition_to_play(ctx, "unlocked via password");
         } else {
-            self.password_error = Some("Incorrect password. Please try again.".to_string());
+            self.password_error = Some(tr(self.settings.language, "Incorrect password. Please try again.").to_string());
+            self.password_input.clear();
+            self.password_is_focused = false;
+            ctx.memory_mut(|mem| mem.stop_text_input());
         }
     }
 
@@ -949,6 +954,26 @@ impl InterruptApp {
                 self.last_pause_interaction = None;
                 self.password_input.clear();
                 self.password_error = None;
+                self.password_is_focused = false;
+            }
+        }
+
+        // If Esc key is pressed while password panel is active/focused, hide panel and resume activity
+        if self.show_pause_unblock_panel && ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+            self.show_pause_unblock_panel = false;
+            self.last_pause_interaction = None;
+            self.password_input.clear();
+            self.password_error = None;
+            self.password_is_focused = false;
+            ctx.memory_mut(|mem| mem.stop_text_input());
+        }
+
+        // Suspend break timer accumulation and scheduled question progression while password field is focused
+        let frame_dt = ctx.input(|i| i.stable_dt);
+        if self.password_is_focused {
+            self.state_start += Duration::from_secs_f32(frame_dt);
+            if let Some(scheduled) = self.pronunciation_next_question_at {
+                self.pronunciation_next_question_at = Some(scheduled + Duration::from_secs_f32(frame_dt));
             }
         }
 
@@ -1056,7 +1081,7 @@ impl InterruptApp {
                                                     .desired_width(120.0),
                                             );
                                             
-                                            if self.math_solved_count < total_needed && self.state == AppState::Pause && !self.show_pause_unblock_panel {
+                                            if self.math_solved_count < total_needed && self.state == AppState::Pause && !self.show_pause_unblock_panel && !self.password_is_focused {
                                                 res.request_focus();
                                             }
 
@@ -1066,7 +1091,7 @@ impl InterruptApp {
                                         });
 
                                         if ui.input(|i| i.key_pressed(egui::Key::Enter)) && !self.math_user_input.is_empty() {
-                                            if !self.show_pause_unblock_panel || !self.focus_password_field {
+                                            if !self.show_pause_unblock_panel && !self.password_is_focused {
                                                 submit_answer = true;
                                             }
                                         }
@@ -1217,7 +1242,7 @@ impl InterruptApp {
                                                     3 => egui::Key::Num4,
                                                     _ => egui::Key::Num0,
                                                 };
-                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel || !self.focus_password_field) {
+                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel && !self.password_is_focused) {
                                                     selected_choice = Some(idx);
                                                     break;
                                                 }
@@ -1362,7 +1387,7 @@ impl InterruptApp {
                                                     3 => egui::Key::Num4,
                                                     _ => egui::Key::Num0,
                                                 };
-                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel || !self.focus_password_field) {
+                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel && !self.password_is_focused) {
                                                     selected_choice = Some(idx);
                                                     break;
                                                 }
@@ -1507,7 +1532,7 @@ impl InterruptApp {
                                                     3 => egui::Key::Num4,
                                                     _ => egui::Key::Num0,
                                                 };
-                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel || !self.focus_password_field) {
+                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel && !self.password_is_focused) {
                                                     selected_choice = Some(idx);
                                                     break;
                                                 }
@@ -1699,7 +1724,7 @@ impl InterruptApp {
                                                     2 => egui::Key::Num3,
                                                     _ => egui::Key::Num0,
                                                 };
-                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel || !self.focus_password_field) {
+                                                if ui.input(|i| i.key_pressed(key)) && (!self.show_pause_unblock_panel && !self.password_is_focused) {
                                                     selected_choice = Some(idx);
                                                     break;
                                                 }
@@ -1777,6 +1802,7 @@ impl InterruptApp {
                                 if response.changed() || response.has_focus() {
                                     self.last_pause_interaction = Some(Instant::now());
                                 }
+                                self.password_is_focused = response.has_focus();
 
                                 if self.focus_password_field {
                                     response.request_focus();
@@ -2592,6 +2618,12 @@ impl Drop for InterruptApp {
 
 fn main() -> eframe::Result<()> {
     win32::log_to_file("[LOG] main: Starting eframe application");
+    if !win32::ensure_single_instance() {
+        win32::log_to_file("[WARN] main: Another instance of Interrupt is already running. Displaying warning and exiting.");
+        win32::show_already_running_warning();
+        return Ok(());
+    }
+
     let args: Vec<String> = std::env::args().collect();
     let debug_mode = args.iter().any(|arg| arg == "--debug" || arg == "-d");
     if debug_mode {
@@ -2648,6 +2680,7 @@ mod tests {
             reset_password_input: String::new(),
             reset_error_message: None,
             show_pause_unblock_panel: false,
+            password_is_focused: false,
             last_pause_interaction: None,
             tray_registered: false,
             should_exit: false,
@@ -2842,6 +2875,31 @@ mod tests {
             assert!(app.pronunciation_correct_idx < 3, "Correct index should be within bounds");
             assert!(!app.pronunciation_phonetic_hint.is_empty(), "Phonetic hint should not be empty");
         }
+    }
+
+    #[test]
+    fn test_single_instance_guard() {
+        let is_first_call = win32::ensure_single_instance();
+        assert!(is_first_call, "First call to ensure_single_instance should succeed");
+    }
+
+    #[test]
+    fn test_try_unblock_incorrect_password_resumes() {
+        let settings = AppSettings::default();
+        let mut app = create_test_app(settings);
+        app.state = AppState::Pause;
+        app.show_pause_unblock_panel = true;
+        app.password_input = "wrong_password".to_string();
+        app.password_is_focused = true;
+
+        // Dummy egui context for test
+        let ctx = egui::Context::default();
+        app.try_unblock(&ctx);
+
+        assert!(app.password_error.is_some(), "Password error should be set on incorrect password");
+        assert!(app.password_input.is_empty(), "Password input should be cleared on incorrect password");
+        assert!(!app.password_is_focused, "Password focus should be released on incorrect password to resume activity");
+        assert_eq!(app.state, AppState::Pause, "App should remain in pause state when unblock fails");
     }
 }
 

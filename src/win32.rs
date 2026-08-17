@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicBool, AtomicIsize, Ordering};
 use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT, WPARAM, GetLastError, POINT, RECT};
-use windows_sys::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+use windows_sys::Win32::System::Threading::{AttachThreadInput, CreateMutexW, GetCurrentThreadId};
 use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
     VK_ESCAPE, VK_F4, VK_LWIN, VK_RWIN, VK_TAB, keybd_event, KEYEVENTF_KEYUP,
 };
@@ -8,7 +8,7 @@ use windows_sys::Win32::System::Diagnostics::Debug::MessageBeep;
 use windows_sys::Win32::Graphics::Gdi::{CreateBitmap, DeleteObject, HGDIOBJ};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
     BringWindowToTop, CallNextHookEx, EnumThreadWindows, GetForegroundWindow, GetSystemMetrics,
-    GetWindowTextW, GetWindowThreadProcessId, IsWindow, SetForegroundWindow, SetWindowLongW, SetWindowPos,
+    GetWindowTextW, GetWindowThreadProcessId, IsWindow, MessageBoxW, SetForegroundWindow, SetWindowLongW, SetWindowPos,
     SetWindowsHookExW, ShowWindow, UnhookWindowsHookEx, GWL_STYLE, HWND_TOPMOST,
     KBDLLHOOKSTRUCT, LLKHF_ALTDOWN, MB_ICONINFORMATION, MB_ICONWARNING, MB_OK, MB_ICONHAND, MB_ICONQUESTION, SM_CXVIRTUALSCREEN, SM_CYVIRTUALSCREEN, SM_XVIRTUALSCREEN,
     SM_YVIRTUALSCREEN, SWP_FRAMECHANGED, SWP_SHOWWINDOW, HWND_NOTOPMOST, SW_RESTORE, SW_SHOW, WH_KEYBOARD_LL,
@@ -671,4 +671,36 @@ pub fn speak_text_async_with_volume(text: &str, volume: u32, play_slow_repeat: b
             .output();
     });
 }
+
+/// Single Instance Guard: Uses a Windows Named Mutex to ensure only one instance of Interrupt runs.
+/// Returns true if this is the ONLY running instance, or false if another instance exists.
+pub fn ensure_single_instance() -> bool {
+    unsafe {
+        let mutex_name: Vec<u16> = "Global\\InterruptSingleInstanceMutex\0".encode_utf16().collect();
+        let handle = CreateMutexW(std::ptr::null(), 1, mutex_name.as_ptr());
+        if handle.is_null() {
+            return true;
+        }
+        let last_error = GetLastError();
+        if last_error == 183 { // ERROR_ALREADY_EXISTS
+            return false;
+        }
+        true
+    }
+}
+
+/// Displays a native Windows warning dialog when a second instance of Interrupt is launched.
+pub fn show_already_running_warning() {
+    unsafe {
+        let title: Vec<u16> = "Interrupt - Already Running\0".encode_utf16().collect();
+        let message: Vec<u16> = "Another instance of Interrupt is already running in the background.\n\nPlease check your system tray or taskbar.\0".encode_utf16().collect();
+        MessageBoxW(
+            std::ptr::null_mut(),
+            message.as_ptr(),
+            title.as_ptr(),
+            MB_OK | MB_ICONWARNING,
+        );
+    }
+}
+
 
