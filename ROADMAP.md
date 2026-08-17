@@ -19,6 +19,7 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
 | FT-11 | English Pronunciation Lock Screen UI Redesign | Implemented |
 | FT-12 | Single-Instance Application Guard | Implemented |
 | FT-13 | Admin Password Focus Activity Pause & Resume | Implemented |
+| FT-14 | Hardened Windows Key & Lock Screen Escape Prevention | Proposed |
 
 ---
 
@@ -116,6 +117,15 @@ This document outlines the proposed feature enhancements for **Interrupt** to im
 ### FT-13: Admin Password Focus Activity Pause & Resume
 * **Description**: Automatically suspend lock screen break timers, scheduled question progression, and quiz keyboard shortcuts whenever the Administrator Password input field is focused. Resume break timers & quiz activity immediately when an incorrect password is entered or when `Esc` is pressed.
 * **Implementation Plan**: Track `password_is_focused` in `InterruptApp`. When true, adjust `self.state_start` and `pronunciation_next_question_at` by frame delta to suspend countdown progression. Handle `Esc` key to close the unblock panel and clear focus, and release focus on wrong password submission to resume activity.
+
+### FT-14: Hardened Windows Key & Lock Screen Escape Prevention
+* **Description**: Eliminate Windows Key (`VK_LWIN` / `VK_RWIN`), Start Menu, Task Switcher (`Alt+Tab`, `Win+Tab`), and shortcut leakage during the `Pause` break state.
+* **Benefits**:
+  - Completely blocks Windows key presses from opening the Start menu or exposing the taskbar.
+  - Prevents `LowLevelHooksTimeout` starvation by decoupling keyboard hooks from the 60 FPS egui rendering thread.
+  - Actively maintains fullscreen topmost Z-order and focus retention against intrusive system notifications.
+* **Implementation Plan**: See [LOCK.md](file:///c:/Users/Leandro/repos/interrupt/LOCK.md) for full architectural design and implementation specifications (dedicated background message pump thread, clean drop semantics, modifier suppression, and focus watcher).
+
 
 
 
