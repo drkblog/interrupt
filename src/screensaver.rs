@@ -696,7 +696,7 @@ impl ScreensaverComponent for PronunciationScreensaver {
 
         // 3. Floating Audio & Speech Symbols
         let symbols = [
-            "🔊", "🎙️", "🎧", "🗣️", "💬", "🎵", "📢", "📻", "🎼", "🎶", "📊", "🌊", "🔤", "👂",
+            "🔊", "🎧", "🎵", "🎶", "💬", "📢", "📻", "🎼", "📊", "🌊", "🔤", "👂", "🔔",
         ];
         let num_elements = 26;
 
