@@ -5,6 +5,15 @@ All notable changes to the **Interrupt** project will be documented in this file
 The format is based on [Keep a Changelog](https.keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.23.0] - 2026-08-16
+
+### Changed
+- **English Pronunciation Lock Screen Redesign (FT-11)**: Completely redesigned the UI look and feel for the English Pronunciation screen lock.
+  - Enlarged typography for titles, instructions, audio playback control buttons, and choice cards to improve legibility and visual hierarchy.
+  - Added custom dynamic audio sine wave visualizers and expanding concentric soundwave pulse animations to the screensaver background.
+  - Custom deep violet/indigo container frame styling with neon purple border accents and soundwave visual header badge, distinguishing it clearly from the Math lock screen.
+- Advanced application version to **1.23.0**.
+
 ## [1.21.0] - 2026-08-11
 
 ### Added

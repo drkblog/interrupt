@@ -1557,20 +1557,25 @@ impl InterruptApp {
                     if self.settings.screensaver_style == ScreensaverStyle::Pronunciation {
                         ui.add_space(20.0);
                         egui::Frame::none()
-                            .fill(egui::Color32::from_rgba_unmultiplied(23, 15, 38, 235))
-                            .rounding(16.0)
-                            .stroke(egui::Stroke::new(1.5, egui::Color32::from_rgba_unmultiplied(192, 132, 252, 130)))
-                            .inner_margin(egui::Margin::same(24.0))
+                            .fill(egui::Color32::from_rgba_unmultiplied(26, 16, 44, 240))
+                            .rounding(18.0)
+                            .stroke(egui::Stroke::new(2.0, egui::Color32::from_rgb(168, 85, 247)))
+                            .inner_margin(egui::Margin::same(28.0))
                             .show(ui, |ui| {
-                                ui.set_max_width(480.0);
+                                ui.set_max_width(540.0);
                                 ui.vertical_centered(|ui| {
                                     ui.label(
-                                        egui::RichText::new(tr(self.settings.language, "🔊 English Pronunciation Quiz"))
-                                            .size(24.0)
-                                            .strong()
-                                            .color(egui::Color32::from_rgb(192, 132, 252)),
+                                        egui::RichText::new("🎙️ 🔊 🗣️")
+                                            .size(22.0)
                                     );
-                                    ui.add_space(4.0);
+                                    ui.add_space(2.0);
+                                    ui.label(
+                                        egui::RichText::new(tr(self.settings.language, "🔊 English Pronunciation Quiz"))
+                                            .size(30.0)
+                                            .strong()
+                                            .color(egui::Color32::from_rgb(216, 180, 254)),
+                                    );
+                                    ui.add_space(6.0);
                                     
                                     let total_needed = self.settings.pronunciation_questions_needed;
                                     ui.label(
@@ -1580,10 +1585,10 @@ impl InterruptApp {
                                             self.pronunciation_solved_count,
                                             total_needed
                                         ))
-                                        .size(14.0)
-                                        .color(egui::Color32::LIGHT_GRAY),
+                                        .size(16.0)
+                                        .color(egui::Color32::from_rgb(203, 213, 225)),
                                     );
-                                    ui.add_space(16.0);
+                                    ui.add_space(18.0);
 
                                     let min_dur_sec = ((self.pause_duration().as_secs() as u32) * self.settings.pronunciation_min_pause_percent) / 100;
                                     let elapsed_sec = self.state_start.elapsed().as_secs();
@@ -1594,7 +1599,7 @@ impl InterruptApp {
                                         self.pause_duration().as_secs() as f32,
                                         min_dur_sec as f32,
                                     );
-                                    ui.add_space(20.0);
+                                    ui.add_space(22.0);
 
                                     if let Some(scheduled_time) = self.pronunciation_next_question_at {
                                         if Instant::now() >= scheduled_time {
@@ -1608,23 +1613,23 @@ impl InterruptApp {
                                     if self.pronunciation_solved_count >= total_needed {
                                         ui.label(
                                             egui::RichText::new("🎉 All questions solved!")
-                                                .size(20.0)
+                                                .size(22.0)
                                                 .strong()
                                                 .color(egui::Color32::from_rgb(52, 211, 153)),
                                         );
                                         ui.add_space(8.0);
                                         ui.label(
                                             egui::RichText::new("Break must continue to meet the minimum required off-game duration.")
-                                                .size(14.0)
+                                                .size(16.0)
                                                 .color(egui::Color32::YELLOW),
                                         );
                                     } else {
                                         ui.label(
                                             egui::RichText::new(tr(self.settings.language, "Listen carefully to the audio and select the word that was pronounced:"))
-                                                .size(15.0)
-                                                .color(egui::Color32::from_rgb(226, 232, 240)),
+                                                .size(18.0)
+                                                .color(egui::Color32::from_rgb(241, 245, 249)),
                                         );
-                                        ui.add_space(12.0);
+                                        ui.add_space(16.0);
 
                                         let is_waiting = self.pronunciation_next_question_at.is_some();
 
@@ -1633,11 +1638,11 @@ impl InterruptApp {
                                             !is_waiting,
                                             egui::Button::new(
                                                 egui::RichText::new(tr(self.settings.language, "🔊 Listen / Replay Audio"))
-                                                    .size(16.0)
+                                                    .size(20.0)
                                                     .strong()
                                                     .color(egui::Color32::WHITE)
                                             )
-                                            .min_size(egui::vec2(240.0, 42.0))
+                                            .min_size(egui::vec2(280.0, 52.0))
                                             .fill(egui::Color32::from_rgb(147, 51, 234))
                                         ).clicked() {
                                             let repeat_slow = self.settings.pronunciation_difficulty == PronunciationDifficulty::Low
@@ -1649,20 +1654,20 @@ impl InterruptApp {
                                             );
                                         }
 
-                                        ui.add_space(18.0);
+                                        ui.add_space(20.0);
 
                                         let mut selected_choice: Option<usize> = None;
                                         ui.add_enabled_ui(!is_waiting, |ui| {
                                             egui::Grid::new("pronunciation_choices_grid")
                                                 .num_columns(3)
-                                                .spacing([12.0, 10.0])
+                                                .spacing([14.0, 12.0])
                                                 .show(ui, |ui| {
                                                     for (idx, choice) in self.pronunciation_choices.iter().enumerate() {
                                                         let btn = ui.add_sized(
-                                                            [136.0, 40.0],
+                                                            [156.0, 52.0],
                                                             egui::Button::new(
                                                                 egui::RichText::new(format!("{}. {}", idx + 1, choice))
-                                                                    .size(15.0)
+                                                                    .size(18.0)
                                                                     .strong()
                                                             )
                                                         );
@@ -1712,24 +1717,25 @@ impl InterruptApp {
                                         }
 
                                         if let Some(ref feedback) = self.pronunciation_feedback {
-                                            ui.add_space(10.0);
+                                            ui.add_space(12.0);
                                             ui.label(
                                                 egui::RichText::new(feedback)
-                                                    .size(14.0)
+                                                    .size(18.0)
+                                                    .strong()
                                                     .color(self.pronunciation_feedback_color),
                                             );
                                         }
                                     }
-
-                                    if !self.show_pause_unblock_panel {
-                                        ui.add_space(12.0);
-                                        if ui.link(tr(self.settings.language, "🔑 Use Administrator Password")).clicked() {
-                                            self.show_pause_unblock_panel = true;
-                                            self.focus_password_field = true;
-                                        }
-                                    }
                                 });
                             });
+                    }
+
+                    if !self.show_pause_unblock_panel {
+                        ui.add_space(12.0);
+                        if ui.link(tr(self.settings.language, "🔑 Use Administrator Password")).clicked() {
+                            self.show_pause_unblock_panel = true;
+                            self.focus_password_field = true;
+                        }
                     }
 
                     ui.add_space(30.0);

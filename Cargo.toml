@@ -1,6 +1,6 @@
 [package]
 name = "interrupt"
-version = "1.21.0"
+version = "1.23.0"
 edition = "2021"
 authors = ["Leandro"]
 description = "A Windows Rust application that enforces healthy screen break cycles."

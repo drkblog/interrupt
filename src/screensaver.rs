@@ -636,28 +636,86 @@ impl ScreensaverComponent for PronunciationScreensaver {
         let screen_rect = ui.ctx().screen_rect();
         let time = ui.input(|i| i.time);
         let painter = ui.painter();
+        let center = screen_rect.center();
 
+        // 1. Draw Concentric Expanding Audio Soundwave Pulse Rings around center
+        let num_pulse_rings = 4;
+        let max_radius = screen_rect.width().min(screen_rect.height()) * 0.45;
+        for i in 0..num_pulse_rings {
+            let phase = (time * 0.4 + i as f64 * 0.25) % 1.0;
+            let radius = phase as f32 * max_radius;
+            let alpha = ((1.0 - phase) * 0.25) as f32; // Fade out as ring expands
+            let color = egui::Color32::from_rgba_unmultiplied(
+                192,
+                132,
+                252,
+                (255.0 * alpha) as u8,
+            );
+            painter.circle_stroke(
+                center,
+                radius,
+                egui::Stroke::new(2.0, color),
+            );
+        }
+
+        // 2. Draw Dynamic Oscillating Audio Waveform Frequency Lines across screen
+        let wave_y_offsets = [-180.0, -90.0, 90.0, 180.0];
+        let wave_frequencies = [0.015, 0.02, 0.012, 0.025];
+        let wave_speeds = [1.8, -1.4, 2.1, -1.2];
+        let wave_amplitudes = [35.0, 25.0, 30.0, 20.0];
+
+        for (w_idx, &base_y_offset) in wave_y_offsets.iter().enumerate() {
+            let y_center = center.y + base_y_offset;
+            let freq = wave_frequencies[w_idx];
+            let speed = wave_speeds[w_idx];
+            let amp = wave_amplitudes[w_idx];
+
+            let stroke_color = match w_idx % 3 {
+                0 => egui::Color32::from_rgba_unmultiplied(192, 132, 252, 60), // Neon Purple
+                1 => egui::Color32::from_rgba_unmultiplied(236, 72, 153, 50),  // Pink Magenta
+                _ => egui::Color32::from_rgba_unmultiplied(168, 85, 247, 55),  // Violet Glow
+            };
+
+            let steps = 60;
+            let step_width = screen_rect.width() / steps as f32;
+            let mut prev_pt: Option<egui::Pos2> = None;
+
+            for step in 0..=steps {
+                let x = screen_rect.min.x + step as f32 * step_width;
+                let sin_val = ((x as f64 * freq + time * speed).sin()
+                    + (x as f64 * freq * 2.3 + time * speed * 0.7).cos() * 0.5) as f32;
+                let y = y_center + sin_val * amp;
+                let current_pt = egui::pos2(x, y);
+
+                if let Some(p) = prev_pt {
+                    painter.line_segment([p, current_pt], egui::Stroke::new(2.0, stroke_color));
+                }
+                prev_pt = Some(current_pt);
+            }
+        }
+
+        // 3. Floating Audio & Speech Symbols
         let symbols = [
-            "🔊", "🎧", "🗣️", "💬", "🎵", "🎙️", "🎶", "📢", "📻", "🔤", "👂", "🔔",
+            "🔊", "🎙️", "🎧", "🗣️", "💬", "🎵", "📢", "📻", "🎼", "🎶", "📊", "🌊", "🔤", "👂",
         ];
-        let num_elements = 24;
+        let num_elements = 26;
 
         for i in 0..num_elements {
             let seed = (i * 61 + 19) as f64;
-            let size = 18.0 + (seed % 16.0) as f32;
+            let size = 22.0 + (seed % 18.0) as f32;
             let x_base = screen_rect.min.x + ((seed * 83.0) as f32 % screen_rect.width());
-            let x_sway = (time * 0.5 + seed).sin() as f32 * 25.0;
+            let x_sway = (time * 0.5 + seed).sin() as f32 * 28.0;
             let x = x_base + x_sway;
 
             let loop_height = screen_rect.height() + 80.0;
             let speed = 16.0 + (seed % 22.0) as f32;
             let y = screen_rect.max.y - ((time as f32 * speed + (seed * 53.0) as f32) % loop_height);
 
-            let alpha = ((time * 0.7 + seed).sin() * 0.2 + 0.35) as f32;
+            let alpha = ((time * 0.7 + seed).sin() * 0.2 + 0.40) as f32;
             let color = egui::Color32::from_rgba_unmultiplied(
-                192,
-                132,
-                252,
+                216,
+                180,
+                254,
                 (255.0 * alpha) as u8,
             );
 
@@ -671,14 +729,15 @@ impl ScreensaverComponent for PronunciationScreensaver {
             );
         }
 
+        // 4. Screensaver Title Banner
         let title = tr(self.lang, "pronunciation_title");
 
         painter.text(
-            screen_rect.center() - egui::vec2(0.0, 200.0),
+            screen_rect.center() - egui::vec2(0.0, 220.0),
             egui::Align2::CENTER_CENTER,
             title,
-            egui::FontId::proportional(30.0),
-            egui::Color32::from_rgb(192, 132, 252),
+            egui::FontId::proportional(34.0),
+            egui::Color32::from_rgb(216, 180, 254),
         );
     }
 }
